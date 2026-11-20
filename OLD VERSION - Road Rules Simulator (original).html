@@ -1,0 +1,2233 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLD VERSION - Road Rules Simulator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#f0f2f5;color:#1a202c;overflow:hidden;height:100vh}
+#app{display:flex;flex-direction:column;height:100vh;width:100%}
+
+/* Title Screen */
+#title-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:20px;background:linear-gradient(160deg,#f5f7ff 0%,#edf0f8 50%,#f0f2f5 100%)}
+.title-icon{font-size:48px;margin-bottom:12px}
+.title-badge{background:#1a73e8;color:#fff;padding:6px 20px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:18px}
+h1{font-size:clamp(28px,5vw,46px);font-weight:800;text-align:center;line-height:1.1;margin-bottom:6px;letter-spacing:-1px;color:#1a202c}
+h1 span{color:#1a73e8}
+.subtitle{color:#5a6577;font-size:clamp(13px,2vw,15px);margin-bottom:36px;text-align:center;max-width:480px;line-height:1.6}
+.category-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px}
+.pill{padding:9px 18px;border-radius:22px;border:2px solid #d0d5dd;background:#fff;color:#5a6577;cursor:pointer;font-size:13px;font-weight:600;transition:all .25s}
+.pill:hover{border-color:#1a73e8;color:#1a73e8}
+.pill.active{border-color:#1a73e8;color:#fff;background:#1a73e8;box-shadow:0 2px 8px rgba(26,115,232,.25)}
+.start-btn{padding:16px 56px;border-radius:12px;border:none;background:#1a73e8;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(26,115,232,.25);letter-spacing:.3px}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(26,115,232,.3);background:#1557b0}
+.scenario-count{color:#8896a6;font-size:13px;margin-top:14px}
+
+/* Game Screen */
+#game-screen{display:none;flex-direction:column;height:100vh;background:#f0f2f5}
+#game-header{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#fff;border-bottom:1px solid #e2e5ea;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.header-left{display:flex;align-items:center;gap:10px}
+.back-btn{padding:5px 12px;border-radius:6px;border:1px solid #d0d5dd;background:#fff;color:#5a6577;font-size:12px;cursor:pointer;transition:all .2s;font-weight:600}
+.back-btn:hover{border-color:#1a73e8;color:#1a73e8}
+.cat-badge{padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700}
+.cat-badge.intersections{background:#dcfce7;color:#15803d}
+.cat-badge.signals{background:#fef3c7;color:#a16207}
+.cat-badge.rules{background:#dbeafe;color:#1d4ed8}
+.cat-badge.safety{background:#fee2e2;color:#dc2626}
+.scenario-title{font-size:13px;font-weight:600;color:#5a6577}
+.header-right{display:flex;align-items:center;gap:12px}
+.progress-text{font-size:12px;color:#8896a6}
+.score-text{font-size:13px;color:#1a73e8;font-weight:700}
+.progress-bar{width:100px;height:5px;background:#e2e5ea;border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:#1a73e8;border-radius:3px;transition:width .4s}
+
+#canvas-wrap{flex:1;position:relative;min-height:0;background:#c8ccc0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#scene{display:block;max-width:100%;max-height:100%;border-radius:2px}
+#scene3d{display:none;position:absolute;top:0;left:0;width:100%;height:100%}
+
+#question-panel{flex-shrink:0;background:#fff;border-top:1px solid #e2e5ea;padding:14px 20px;max-height:36vh;overflow-y:auto;box-shadow:0 -2px 8px rgba(0,0,0,.04)}
+.q-text{font-size:15px;font-weight:600;margin-bottom:10px;line-height:1.5;color:#1a202c}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.choice-btn{padding:12px 16px;border-radius:10px;border:2px solid #e2e5ea;background:#fff;color:#3a4553;font-size:13px;cursor:pointer;text-align:left;transition:all .2s;line-height:1.4;font-weight:500}
+.choice-btn:hover:not(.disabled){border-color:#1a73e8;color:#1a73e8;background:#f0f4ff}
+.choice-btn.correct{border-color:#16a34a;color:#15803d;background:#f0fdf4}
+.choice-btn.incorrect{border-color:#dc2626;color:#dc2626;background:#fef2f2}
+.choice-btn.disabled{cursor:default;opacity:.65}
+.explanation-box{margin-top:10px;padding:12px 14px;border-radius:10px;background:#f0fdf4;border-left:3px solid #16a34a;font-size:13px;line-height:1.55;color:#166534;display:none}
+.explanation-box.wrong{background:#fef2f2;border-left-color:#dc2626;color:#991b1b}
+.explanation-box .tip{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.06);color:#6b7280;font-style:italic;font-size:12px}
+.next-btn{margin-top:10px;padding:10px 32px;border-radius:8px;border:none;background:#1a73e8;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:none;transition:all .2s;box-shadow:0 2px 6px rgba(26,115,232,.2)}
+.next-btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(26,115,232,.3)}
+
+/* Results Screen */
+#results-screen{display:none;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:24px;background:linear-gradient(160deg,#f5f7ff 0%,#f0f2f5 100%)}
+.results-card{background:#fff;border:1px solid #e2e5ea;border-radius:16px;padding:36px;max-width:480px;width:100%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.results-card h2{font-size:24px;margin-bottom:4px;font-weight:700;color:#1a202c}
+.results-card .score-big{font-size:56px;font-weight:800;color:#1a73e8;margin:8px 0}
+.results-card .score-label{color:#8896a6;font-size:14px;margin-bottom:20px}
+.results-breakdown{text-align:left;margin-bottom:20px}
+.breakdown-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f2f5;font-size:14px}
+.breakdown-row .cat{color:#5a6577}
+.breakdown-row .val{font-weight:700}
+.breakdown-row .val.good{color:#16a34a}
+.breakdown-row .val.bad{color:#dc2626}
+.retry-btn{padding:14px 40px;border-radius:12px;border:none;background:#1a73e8;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px;box-shadow:0 4px 12px rgba(26,115,232,.2)}
+.retry-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(26,115,232,.3)}
+
+@media(max-width:700px){
+  .choices{grid-template-columns:1fr}
+  .scenario-title{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="title-screen">
+    <div class="title-icon">🚗</div>
+    <div class="title-badge">Driver's Education</div>
+    <h1>Road Rules <span>Simulator</span></h1>
+    <p class="subtitle">Practice real driving test scenarios - intersections, signs, parking, highway driving, and hazard response</p>
+    <div class="category-pills">
+      <button class="pill active" data-cat="all">All Scenarios</button>
+      <button class="pill" data-cat="intersections">Intersections</button>
+      <button class="pill" data-cat="signals">Signs & Signals</button>
+      <button class="pill" data-cat="rules">Rules of the Road</button>
+      <button class="pill" data-cat="safety">Safety & Hazards</button>
+    </div>
+    <button class="start-btn" id="start-btn">Start Simulator</button>
+    <p class="scenario-count" id="scenario-count">24 scenarios</p>
+  </div>
+
+  <div id="game-screen">
+    <div id="game-header">
+      <div class="header-left">
+        <button class="back-btn" id="back-btn">← Menu</button>
+        <span class="cat-badge" id="cat-badge">Intersections</span>
+        <span class="scenario-title" id="scn-title"></span>
+      </div>
+      <div class="header-right">
+        <span class="progress-text" id="prog-text">1 / 24</span>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+        <span class="score-text" id="score-text">0</span>
+      </div>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="scene"></canvas>
+      <canvas id="scene3d" style="display:none"></canvas>
+    </div>
+    <div id="question-panel">
+      <p class="q-text" id="q-text"></p>
+      <div class="choices" id="choices"></div>
+      <div class="explanation-box" id="explanation"></div>
+      <button class="next-btn" id="next-btn">Next Scenario →</button>
+    </div>
+  </div>
+
+  <div id="results-screen">
+    <div class="results-card">
+      <h2>Simulator Complete!</h2>
+      <div class="score-big" id="final-score">0%</div>
+      <p class="score-label" id="final-label">0 / 24 correct</p>
+      <div class="results-breakdown" id="breakdown"></div>
+      <button class="retry-btn" id="retry-btn">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================== CONSTANTS =====================
+const CW = 960, CH = 540;
+const LANE_W = 52, ROAD_W = LANE_W * 2;
+const CX = CW / 2, CY = CH / 2;
+const CAR_L = 46, CAR_W = 24;
+
+// Direction vectors - angle makes windshield face direction of travel
+const DIR = {
+  north: { angle: Math.PI/2, lane:{x:CX+LANE_W/2, stopY:CY-ROAD_W/2-CAR_L/2-6}, start:{x:CX+LANE_W/2, y:-CAR_L} },
+  south: { angle:-Math.PI/2, lane:{x:CX-LANE_W/2, stopY:CY+ROAD_W/2+CAR_L/2+6}, start:{x:CX-LANE_W/2, y:CH+CAR_L} },
+  east:  { angle: Math.PI,   lane:{y:CY+LANE_W/2, stopX:CX+ROAD_W/2+CAR_L/2+6}, start:{x:CW+CAR_L, y:CY+LANE_W/2} },
+  west:  { angle: 0,         lane:{y:CY-LANE_W/2, stopX:CX-ROAD_W/2-CAR_L/2-6}, start:{x:-CAR_L, y:CY-LANE_W/2} }
+};
+
+const CAT_COLORS = {
+  intersections:{bg:'#1a3a2a',fg:'#4ade80',cls:'intersections'},
+  signals:{bg:'#3a2a1a',fg:'#fbbf24',cls:'signals'},
+  rules:{bg:'#1a2a3a',fg:'#60a5fa',cls:'rules'},
+  safety:{bg:'#3a1a1a',fg:'#f87171',cls:'safety'}
+};
+
+// ===================== SCENARIOS =====================
+const ALL_SCENARIOS = [
+  // ─── INTERSECTIONS (6) ───
+  {
+    id:1, type:'intersection', category:'intersections', catLabel:'Intersections',
+    title:'Four-Way Stop: First to Arrive',
+    roadConfig:{type:'four-way',control:'stop-all',crosswalk:true},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'north',intent:'straight',arrivalDelay:0.5,isPlayer:false},
+      {id:'B',color:'#3498db',approach:'east',intent:'straight',arrivalDelay:0,isPlayer:false},
+      {id:'C',color:'#f1c40f',approach:'south',intent:'straight',arrivalDelay:1.0,isPlayer:false},
+      {id:'D',color:'#2ecc71',approach:'west',intent:'straight',arrivalDelay:0.8,isPlayer:true}
+    ],
+    question:'Four cars approach a 4-way stop. Car B (blue) stopped first, then A (red), then D (green, you), then C (yellow). Who should go first?',
+    choices:['Car A (Red)','Car B (Blue)','Car C (Yellow)','Car D (Green - You)'],
+    correct:1,
+    explanation:'At a four-way stop, the first vehicle to come to a complete stop has the right of way. Car B stopped first.',
+    tip:'First to stop = first to go.'
+  },
+  {
+    id:2, type:'intersection', category:'intersections', catLabel:'Intersections',
+    title:'Simultaneous Arrival: Yield to the Right',
+    roadConfig:{type:'four-way',control:'stop-all',crosswalk:true},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'north',intent:'straight',arrivalDelay:0,isPlayer:true},
+      {id:'B',color:'#3498db',approach:'west',intent:'straight',arrivalDelay:0,isPlayer:false}
+    ],
+    question:'You (Car A, red) and Car B (blue) arrive at the stop sign at the same time. Car B is to your right. Who goes first?',
+    choices:['You (Car A) - you\'re going straight','Car B - they are to your right','Whoever waves first','Both go at the same time'],
+    correct:1,
+    explanation:'When vehicles arrive at a stop simultaneously, yield to the vehicle on your RIGHT. Car B is to your right.',
+    tip:'Same-time arrival = yield to the right. Think clockwise!'
+  },
+  {
+    id:3, type:'intersection', category:'intersections', catLabel:'Intersections',
+    title:'Left Turn Yields to Oncoming',
+    roadConfig:{type:'four-way',control:'stop-all',crosswalk:true},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'south',intent:'left',arrivalDelay:0,isPlayer:true},
+      {id:'B',color:'#3498db',approach:'north',intent:'straight',arrivalDelay:0,isPlayer:false}
+    ],
+    question:'You (Car A) and Car B arrive at opposite stop signs simultaneously. You want to turn LEFT; Car B is going STRAIGHT. Who goes first?',
+    choices:['You - turning left','Car B - going straight','Whoever acts first','Flash lights to signal your turn'],
+    correct:1,
+    explanation:'A vehicle turning LEFT must yield to oncoming traffic going straight or turning right, even at a simultaneous arrival.',
+    tip:'Left turn ALWAYS yields to oncoming straight traffic.'
+  },
+  {
+    id:4, type:'intersection', category:'intersections', catLabel:'Intersections',
+    title:'Pedestrian in Crosswalk',
+    roadConfig:{type:'four-way',control:'stop-all',crosswalk:true},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'west',intent:'straight',arrivalDelay:0,isPlayer:true}
+    ],
+    pedestrians:[{id:'P',x:CX+ROAD_W/2+20,y:CY-ROAD_W/2-10,targetX:CX-ROAD_W/2-30,delay:0.6}],
+    question:'You stop at a stop sign. A pedestrian steps into the crosswalk. What should you do?',
+    choices:['Go - you arrived at the sign first','Honk to hurry them','Wait until they fully cross','Creep forward slowly behind them'],
+    correct:2,
+    explanation:'Pedestrians in a crosswalk ALWAYS have the right of way. You must wait until they have completely crossed your path before proceeding.',
+    tip:'Pedestrians always have priority in crosswalks - marked or unmarked.'
+  },
+  {
+    id:5, type:'intersection', category:'intersections', catLabel:'Intersections',
+    title:'Green Light Left Turn',
+    roadConfig:{type:'four-way',control:'signal',crosswalk:true},
+    trafficLight:{ns:'green',ew:'red'},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'south',intent:'left',arrivalDelay:0,isPlayer:true},
+      {id:'B',color:'#3498db',approach:'north',intent:'straight',arrivalDelay:0.3,isPlayer:false}
+    ],
+    question:'You have a solid GREEN light and want to turn LEFT. Car B also has green and is coming straight at you. What should you do?',
+    choices:['Turn left - green means go','Wait for Car B to pass, then turn','Turn quickly before they arrive','Flash lights to claim your turn'],
+    correct:1,
+    explanation:'On a solid green, left turns must YIELD to all oncoming traffic. Wait for a safe gap. A green ARROW would give you a protected turn.',
+    tip:'Solid green + left turn = YIELD. Green arrow = protected turn.'
+  },
+  {
+    id:6, type:'intersection', category:'intersections', catLabel:'Intersections',
+    title:'Right Turn on Red',
+    roadConfig:{type:'four-way',control:'signal',crosswalk:true},
+    trafficLight:{ns:'red',ew:'green'},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'north',intent:'right',arrivalDelay:0,isPlayer:true},
+      {id:'B',color:'#3498db',approach:'west',intent:'straight',arrivalDelay:0.4,isPlayer:false}
+    ],
+    question:'You have a RED light and want to turn RIGHT. Cross traffic has a green light. What must you do?',
+    choices:['Turn immediately - right on red is free','Stop completely, then turn when clear','Wait for the light to turn green','Right on red is never allowed'],
+    correct:1,
+    explanation:'Right turn on red is permitted AFTER a complete stop and yielding to all traffic and pedestrians. Check for "No Turn on Red" signs first.',
+    tip:'Right on red = STOP first, look for signs, then go when clear.'
+  },
+
+  // ─── SIGNS & SIGNALS (6) ───
+  {
+    id:7, type:'first-person', category:'signals', catLabel:'Signs & Signals',
+    title:'Yellow Light Decision',
+    scene:{road:'four-lane',speed:35},fpType:'yellow-light',
+    question:'You\'re driving 35 mph approaching an intersection. The light turns YELLOW when you\'re about 80 feet away. What should you do?',
+    choices:['Speed up to beat the red','Stop safely - you have enough distance','Maintain speed and enter the intersection','Slam on the brakes'],
+    correct:1,
+    explanation:'At 35 mph, 80 feet gives you enough stopping distance. If you can stop safely before the intersection, you should.',
+    tip:'Yellow means "stop if safe." The decision depends on speed and distance.'
+  },
+  {
+    id:8, type:'intersection', category:'signals', catLabel:'Signs & Signals',
+    title:'Flashing Red Light',
+    roadConfig:{type:'four-way',control:'flash-red',crosswalk:true},
+    vehicles:[
+      {id:'A',color:'#e74c3c',approach:'west',intent:'straight',arrivalDelay:0,isPlayer:true},
+      {id:'B',color:'#3498db',approach:'south',intent:'straight',arrivalDelay:0.2,isPlayer:false}
+    ],
+    question:'You approach an intersection with a FLASHING RED light. What does it mean?',
+    choices:['Slow down and proceed with caution','Treat it exactly like a stop sign','The traffic light is broken - go normally','Yield to traffic but no need to stop'],
+    correct:1,
+    explanation:'A flashing red light = stop sign. Come to a complete stop, yield to traffic and pedestrians, then proceed when safe.',
+    tip:'Flashing RED = stop sign. Flashing YELLOW = caution, slow down.'
+  },
+  {
+    id:9, type:'first-person', category:'signals', catLabel:'Signs & Signals',
+    title:'Yield Sign',
+    scene:{road:'two-lane',speed:30},fpType:'yield-sign',
+    question:'You approach a YIELD sign where a side road merges onto your road. Another car is already on the main road. What must you do?',
+    choices:['Stop completely, then go','Slow down, yield to traffic, merge when safe','Maintain speed - you have the right of way','Speed up to merge ahead of them'],
+    correct:1,
+    explanation:'A yield sign means slow down, be prepared to stop, and give right of way to traffic already on the road you\'re entering. You don\'t have to stop if the way is clear.',
+    tip:'Yield ≠ stop. Slow down, look, and merge when there\'s a safe gap.'
+  },
+  {
+    id:10, type:'first-person', category:'signals', catLabel:'Signs & Signals',
+    title:'Speed Limit in a School Zone',
+    scene:{road:'residential',speed:30},fpType:'school-zone',
+    question:'You see a "SCHOOL ZONE - 15 MPH WHEN CHILDREN PRESENT" sign with flashing lights. It\'s 3:00 PM on a school day. What should you do?',
+    choices:['Drive 15 mph only if you see children','Always drive 15 mph when lights are flashing','Drive 25 mph - school zones are just suggestions','Speed up to get through quickly'],
+    correct:1,
+    explanation:'When school zone lights are flashing, you MUST drive the posted school zone speed limit regardless of whether you see children. Fines are typically doubled or tripled.',
+    tip:'School zone flashing lights = mandatory speed reduction. Huge fines for violations.'
+  },
+  {
+    id:11, type:'first-person', category:'signals', catLabel:'Signs & Signals',
+    title:'Solid Yellow Center Line',
+    scene:{road:'two-lane',speed:45},fpType:'no-passing',
+    question:'You\'re behind a slow vehicle on a two-lane road. There is a SOLID YELLOW line on your side of the center. Can you pass?',
+    choices:['Yes - if the road ahead looks clear','No - a solid line on your side means no passing','Yes - but only if you signal first','Yes - solid lines are just guidelines'],
+    correct:1,
+    explanation:'A solid yellow line on YOUR side means passing is prohibited. You must wait until the line becomes dashed on your side to pass legally.',
+    tip:'Solid line = no pass. Dashed line = passing allowed when safe.'
+  },
+  {
+    id:12, type:'first-person', category:'signals', catLabel:'Signs & Signals',
+    title:'Do Not Enter Sign',
+    scene:{road:'highway',speed:40},fpType:'do-not-enter',
+    question:'You see a red and white "DO NOT ENTER" sign at a road entrance. What does this mean?',
+    choices:['One-way street - you can enter if careful','Do not enter - you\'d be going the wrong way','Restricted hours only - check the times','Road under construction ahead'],
+    correct:1,
+    explanation:'A "DO NOT ENTER" sign means the road ahead is one-way and you would be driving against traffic. Entering is extremely dangerous and illegal.',
+    tip:'DO NOT ENTER and WRONG WAY signs often appear together at highway off-ramp entrances.'
+  },
+
+  // ─── RULES OF THE ROAD (6) ───
+  {
+    id:13, type:'first-person', category:'rules', catLabel:'Rules of the Road',
+    title:'Following Distance',
+    scene:{road:'highway',speed:60},fpType:'following',
+    question:'You\'re driving 60 mph on the highway behind another vehicle. What is the minimum recommended following distance?',
+    choices:['1 second (one car length)','2 seconds','3-4 seconds','The length of your vehicle'],
+    correct:2,
+    explanation:'The recommended minimum following distance is 3-4 seconds at highway speeds. Increase to 5-6+ seconds in rain, fog, or at night.',
+    tip:'Pick a fixed object ahead. When the car in front passes it, count "one-thousand-one, one-thousand-two, one-thousand-three."'
+  },
+  {
+    id:14, type:'first-person', category:'rules', catLabel:'Rules of the Road',
+    title:'When to Signal a Turn',
+    scene:{road:'residential',speed:25},fpType:'turn-signal',
+    question:'You plan to turn right at the next intersection. How far in advance should you activate your turn signal?',
+    choices:['Right as you begin turning','At least 100 feet before the turn','At least 2 miles before','Only if other cars are behind you'],
+    correct:1,
+    explanation:'You must signal at least 100 feet before a turn in most states (some require 200+ feet at higher speeds). Signal even if you don\'t see other vehicles - pedestrians and cyclists need warning too.',
+    tip:'Signal BEFORE braking. Other drivers need time to react to your intentions.'
+  },
+  {
+    id:15, type:'first-person', category:'rules', catLabel:'Rules of the Road',
+    title:'Lane Change: Blind Spots',
+    scene:{road:'highway',speed:55},fpType:'lane-change',
+    question:'You want to change lanes on the highway. You\'ve checked your mirrors and the lane appears clear. What must you also do?',
+    choices:['Just go - mirrors show everything','Turn your head to check your blind spot','Honk your horn to warn others','Slow down first, then move over'],
+    correct:1,
+    explanation:'Mirrors have blind spots - areas you cannot see. You MUST turn your head and glance over your shoulder to check the blind spot before changing lanes.',
+    tip:'Mirror → Signal → Head check → Move. This sequence prevents blind-spot collisions.'
+  },
+  {
+    id:16, type:'first-person', category:'rules', catLabel:'Rules of the Road',
+    title:'Uphill Parking: Wheel Direction',
+    scene:{road:'residential',speed:0},fpType:'uphill-parking',
+    question:'You park your car facing UPHILL on a street WITH a curb. Which way should you turn your front wheels?',
+    choices:['Turn wheels toward the curb (right)','Turn wheels away from the curb (left)','Keep wheels straight','It doesn\'t matter'],
+    correct:1,
+    explanation:'When parking UPHILL with a curb, turn your wheels AWAY from the curb (left). If the car rolls backward, the wheels will catch the curb and stop it.',
+    tip:'Uphill = wheels away from curb. Downhill = wheels toward curb. No curb = always toward the shoulder (right).'
+  },
+  {
+    id:17, type:'first-person', category:'rules', catLabel:'Rules of the Road',
+    title:'Parking Near a Fire Hydrant',
+    scene:{road:'residential',speed:0},fpType:'fire-hydrant',
+    question:'You\'re looking for parking on a city street. How close can you legally park to a fire hydrant?',
+    choices:['5 feet','10 feet','15 feet','Right next to it if you\'ll be quick'],
+    correct:2,
+    explanation:'You must park at least 15 feet away from a fire hydrant. Blocking a hydrant can result in a ticket, towing, and could prevent firefighters from accessing water in an emergency.',
+    tip:'15 feet from hydrants, 20 feet from crosswalks, 30 feet from traffic signals.'
+  },
+  {
+    id:18, type:'first-person', category:'rules', catLabel:'Rules of the Road',
+    title:'Headlight Requirements',
+    scene:{road:'two-lane',speed:40},fpType:'headlights',
+    question:'When are you required to turn on your headlights?',
+    choices:['Only at night','From sunset to sunrise and when visibility is under 1,000 feet','Only during heavy rain or fog','Headlights are optional'],
+    correct:1,
+    explanation:'Headlights are required from sunset to sunrise AND whenever visibility is reduced below 1,000 feet (rain, fog, snow, dust). Many states also require them in construction zones and when wipers are on.',
+    tip:'Good rule: if your wipers are on, your headlights should be on too.'
+  },
+
+  // ─── SAFETY & HAZARDS (6) ───
+  {
+    id:19, type:'first-person', category:'safety', catLabel:'Safety & Hazards',
+    title:'Emergency Vehicle Approaching',
+    scene:{road:'two-lane',speed:40},fpType:'emergency',
+    question:'You hear a siren and see flashing red/blue lights in your rearview mirror. An ambulance needs to pass. What should you do?',
+    choices:['Speed up to get out of the way','Pull over to the RIGHT and stop','Move to the left lane','Maintain your speed and lane'],
+    correct:1,
+    explanation:'Pull over to the RIGHT and come to a complete stop. Wait until the emergency vehicle has passed before re-entering traffic.',
+    tip:'Always pull RIGHT. On a divided highway, only vehicles on the same side must stop.'
+  },
+  {
+    id:20, type:'first-person', category:'safety', catLabel:'Safety & Hazards',
+    title:'School Bus Lights Flashing',
+    scene:{road:'two-lane',speed:30},fpType:'school-bus',
+    question:'A school bus ahead activates its red flashing lights and extends its STOP sign. Children are exiting. What must you do?',
+    choices:['Slow down and pass carefully','Stop and wait until lights stop and arm retracts','Honk to alert children and pass','Stop only if children are visible'],
+    correct:1,
+    explanation:'When a school bus has red lights flashing and stop arm extended, ALL traffic in BOTH directions must stop. Remain stopped until lights stop flashing and the stop arm retracts.',
+    tip:'On a divided highway with a physical median, oncoming traffic may not need to stop.'
+  },
+  {
+    id:21, type:'first-person', category:'safety', catLabel:'Safety & Hazards',
+    title:'Railroad Crossing Warning',
+    scene:{road:'two-lane',speed:35},fpType:'railroad',
+    question:'Railroad warning lights begin flashing and the gate starts lowering. You think you could make it across. What should you do?',
+    choices:['Speed up and cross before the gate drops','Stop at least 15 feet from the nearest rail','Wait close to the tracks to cross quickly','Go around the gate if no train is visible'],
+    correct:1,
+    explanation:'You MUST stop at least 15 feet from the nearest rail. NEVER cross when signals are active. It is illegal and deadly to go around lowered gates.',
+    tip:'Trains at 55 mph need over a MILE to stop. You cannot outrun them.'
+  },
+  {
+    id:22, type:'first-person', category:'safety', catLabel:'Safety & Hazards',
+    title:'Merging Onto the Highway',
+    scene:{road:'highway-merge',speed:45},fpType:'merge',
+    question:'You\'re on a highway on-ramp with moderate traffic in the right lane. What is the correct way to merge?',
+    choices:['Stop at the end of the ramp and wait','Match highway speed, signal, and merge into a gap','Merge immediately at your current slower speed','Force your way in - highway traffic must yield'],
+    correct:1,
+    explanation:'Use the acceleration lane to match highway speed. Check mirrors and blind spot, signal, and merge smoothly into a gap. Stopping on the ramp is dangerous.',
+    tip:'Merging vehicles must yield to highway traffic - but matching speed makes it safe.'
+  },
+  {
+    id:23, type:'first-person', category:'safety', catLabel:'Safety & Hazards',
+    title:'Hydroplaning on Wet Road',
+    scene:{road:'two-lane',weather:'rain',speed:55},fpType:'hydroplane',
+    question:'It\'s raining heavily. At 55 mph your steering goes light - the car is hydroplaning. What should you do?',
+    choices:['Brake hard to slow down','Ease off the gas and steer straight','Turn sharply to regain grip','Accelerate to power through'],
+    correct:1,
+    explanation:'When hydroplaning: do NOT brake hard or steer sharply. Ease off the gas, keep the wheel straight, and let the tires naturally regain contact with the road.',
+    tip:'Hydroplaning starts around 35 mph on wet roads. Slow down in rain.'
+  },
+  {
+    id:24, type:'first-person', category:'safety', catLabel:'Safety & Hazards',
+    title:'Construction Zone',
+    scene:{road:'construction',speed:45},fpType:'construction',
+    question:'You enter a construction zone. A sign reads "ROAD WORK AHEAD - Fines Doubled." Orange cones narrow the road. What should you do?',
+    choices:['Maintain speed until you see workers','Slow down and follow posted speed limits','Speed up to clear the zone quickly','Use the shoulder to avoid the cones'],
+    correct:1,
+    explanation:'Always reduce speed in construction zones and obey posted limits. Fines are typically doubled or more. Workers may be present even if you can\'t see them.',
+    tip:'Construction zone fines can be 2-3x normal. Workers\' lives depend on your attention.'
+  }
+];
+
+// ===================== STATE =====================
+let canvas, ctx;
+let state = {
+  screen:'title', selectedCat:'all', scenarios:[], current:0, score:0,
+  answered:false, answers:[], animPhase:'approaching', animTime:0,
+  vehicles:[], pedestrianAnim:null
+};
+
+// ===================== INIT =====================
+function init() {
+  canvas = document.getElementById('scene');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  init3D();
+  window.addEventListener('resize', resizeCanvas);
+
+  document.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('.pill').forEach(pp => pp.classList.remove('active'));
+      p.classList.add('active');
+      state.selectedCat = p.dataset.cat;
+      updateScenarioCount();
+    });
+  });
+
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('next-btn').addEventListener('click', nextScenario);
+  document.getElementById('retry-btn').addEventListener('click', () => showScreen('title'));
+  document.getElementById('back-btn').addEventListener('click', () => showScreen('title'));
+
+  document.addEventListener('keydown', e => {
+    if (state.screen === 'game') {
+      if (e.key >= '1' && e.key <= '4' && !state.answered) handleAnswer(parseInt(e.key)-1);
+      if ((e.key === 'Enter' || e.key === ' ') && state.answered) nextScenario();
+    }
+    if (e.key === 'Enter' && state.screen === 'title') startGame();
+    if (e.key === 'Escape' && state.screen === 'game') showScreen('title');
+  });
+
+  updateScenarioCount();
+  requestAnimationFrame(gameLoop);
+}
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  if (!wrap) return;
+  // 2D canvas: fixed aspect ratio, CSS-scaled to fit
+  canvas.width = CW; canvas.height = CH;
+  const scale = Math.min(wrap.clientWidth / CW, wrap.clientHeight / CH);
+  canvas.style.width = (CW * scale) + 'px';
+  canvas.style.height = (CH * scale) + 'px';
+  // 3D canvas: fill the wrap completely (only when visible)
+  if (renderer3D && camera3D && canvas3d.style.display !== 'none') {
+    const ww = wrap.clientWidth, wh = wrap.clientHeight;
+    if (ww > 0 && wh > 0) {
+      renderer3D.setSize(ww, wh, false);
+      camera3D.aspect = ww / wh;
+      camera3D.updateProjectionMatrix();
+    }
+  }
+}
+
+function updateScenarioCount() {
+  const c = state.selectedCat;
+  const n = c === 'all' ? ALL_SCENARIOS.length : ALL_SCENARIOS.filter(s => s.category === c).length;
+  document.getElementById('scenario-count').textContent = n + ' scenario' + (n !== 1 ? 's' : '');
+}
+
+function showScreen(name) {
+  ['title-screen','game-screen','results-screen'].forEach(id => document.getElementById(id).style.display = 'none');
+  if (name === 'title') document.getElementById('title-screen').style.display = 'flex';
+  else if (name === 'game') document.getElementById('game-screen').style.display = 'flex';
+  else if (name === 'results') document.getElementById('results-screen').style.display = 'flex';
+  state.screen = name;
+  if (name === 'game') resizeCanvas();
+}
+
+// ===================== GAME LOGIC =====================
+function startGame() {
+  const c = state.selectedCat;
+  state.scenarios = c === 'all' ? [...ALL_SCENARIOS] : ALL_SCENARIOS.filter(s => s.category === c);
+  state.current = 0; state.score = 0; state.answers = [];
+  showScreen('game');
+  loadScenario();
+}
+
+function loadScenario() {
+  const scn = state.scenarios[state.current];
+  state.answered = false; state.animPhase = 'approaching'; state.animTime = 0;
+
+  const cc = CAT_COLORS[scn.category] || CAT_COLORS.intersections;
+  const badge = document.getElementById('cat-badge');
+  badge.textContent = scn.catLabel;
+  badge.className = 'cat-badge ' + cc.cls;
+  document.getElementById('scn-title').textContent = scn.title;
+  document.getElementById('prog-text').textContent = (state.current+1)+' / '+state.scenarios.length;
+  document.getElementById('prog-fill').style.width = ((state.current/state.scenarios.length)*100)+'%';
+  document.getElementById('score-text').textContent = state.score+' correct';
+
+  document.getElementById('q-text').textContent = scn.question;
+  const cd = document.getElementById('choices'); cd.innerHTML = '';
+  scn.choices.forEach((ch,i) => {
+    const b = document.createElement('button');
+    b.className = 'choice-btn';
+    b.textContent = (i+1)+'. '+ch;
+    b.addEventListener('click', () => handleAnswer(i));
+    cd.appendChild(b);
+  });
+  document.getElementById('explanation').style.display = 'none';
+  document.getElementById('explanation').className = 'explanation-box';
+  document.getElementById('next-btn').style.display = 'none';
+
+  initVehicles(scn);
+
+  // Switch canvas for 3D first-person vs 2D intersection
+  if (scn.type === 'first-person') {
+    canvas.style.display = 'none';
+    canvas3d.style.display = 'block';
+    // Size canvas immediately - wrap dimensions are valid now
+    const wrap = document.getElementById('canvas-wrap');
+    const ww = wrap.clientWidth, wh = wrap.clientHeight;
+    renderer3D.setSize(ww, wh, false);
+    camera3D.aspect = ww / wh;
+    camera3D.updateProjectionMatrix();
+    setup3DScenario(scn);
+  } else {
+    canvas.style.display = 'block';
+    canvas3d.style.display = 'none';
+  }
+}
+
+function initVehicles(scn) {
+  state.vehicles = [];
+  if (scn.type !== 'intersection' || !scn.vehicles) return;
+  scn.vehicles.forEach(v => {
+    const d = DIR[v.approach];
+    const sv = {
+      id:v.id,color:v.color,approach:v.approach,intent:v.intent,
+      isPlayer:v.isPlayer,arrivalDelay:v.arrivalDelay||0,
+      angle:d.angle,stopped:false,proceeding:false,gone:false
+    };
+    if (v.approach === 'north' || v.approach === 'south') {
+      sv.x = d.lane.x; sv.y = d.start.y;
+      sv.stopX = sv.x; sv.stopY = d.lane.stopY;
+    } else {
+      sv.x = d.start.x; sv.y = d.lane.y;
+      sv.stopX = d.lane.stopX; sv.stopY = sv.y;
+    }
+    state.vehicles.push(sv);
+  });
+  state.pedestrianAnim = null;
+  if (scn.pedestrians && scn.pedestrians.length) {
+    const p = scn.pedestrians[0];
+    state.pedestrianAnim = {x:p.x,y:p.y,targetX:p.targetX||null,targetY:p.targetY||null,delay:p.delay||0};
+  }
+}
+
+function handleAnswer(idx) {
+  if (state.answered) return;
+  state.answered = true;
+  const scn = state.scenarios[state.current];
+  const ok = idx === scn.correct;
+  if (ok) state.score++;
+  state.answers.push({correct:ok,category:scn.category});
+
+  const btns = document.querySelectorAll('.choice-btn');
+  btns.forEach((b,i) => {
+    b.classList.add('disabled');
+    b.disabled = true;
+    if (i === scn.correct) b.classList.add('correct');
+    if (i === idx && !ok) b.classList.add('incorrect');
+  });
+
+  const ex = document.getElementById('explanation');
+  ex.innerHTML = '<strong>'+(ok?'Correct!':'Incorrect')+'</strong> '+scn.explanation+
+    (scn.tip?'<div class="tip">'+scn.tip+'</div>':'');
+  ex.className = 'explanation-box'+(ok?'':' wrong');
+  ex.style.display = 'block';
+  const nextBtn = document.getElementById('next-btn');
+  nextBtn.style.display = 'inline-block';
+  document.getElementById('score-text').textContent = state.score+' correct';
+
+  // Auto-scroll question panel to show explanation and next button
+  setTimeout(() => {
+    nextBtn.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }, 100);
+
+  state.animPhase = 'resolving'; state.animTime = 0;
+}
+
+function nextScenario() {
+  state.current++;
+  if (state.current >= state.scenarios.length) showResults();
+  else loadScenario();
+}
+
+function showResults() {
+  showScreen('results');
+  const t = state.scenarios.length;
+  const pct = Math.round((state.score/t)*100);
+  document.getElementById('final-score').textContent = pct+'%';
+  document.getElementById('final-label').textContent = state.score+' / '+t+' correct';
+  const cats = {};
+  state.answers.forEach(a => {
+    if (!cats[a.category]) cats[a.category] = {correct:0,total:0};
+    cats[a.category].total++;
+    if (a.correct) cats[a.category].correct++;
+  });
+  const catLabels = {intersections:'Intersections',signals:'Signs & Signals',rules:'Rules of the Road',safety:'Safety & Hazards'};
+  let html = '';
+  for (const cat in cats) {
+    const c = cats[cat]; const good = c.correct === c.total;
+    html += '<div class="breakdown-row"><span class="cat">'+catLabels[cat]+'</span><span class="val '+(good?'good':'bad')+'">'+c.correct+'/'+c.total+'</span></div>';
+  }
+  document.getElementById('breakdown').innerHTML = html;
+}
+
+// ===================== DRAWING UTILITIES =====================
+function roundRect(cx,x,y,w,h,r) {
+  cx.beginPath();
+  cx.moveTo(x+r,y); cx.lineTo(x+w-r,y);
+  cx.quadraticCurveTo(x+w,y,x+w,y+r); cx.lineTo(x+w,y+h-r);
+  cx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); cx.lineTo(x+r,y+h);
+  cx.quadraticCurveTo(x,y+h,x,y+h-r); cx.lineTo(x,y+r);
+  cx.quadraticCurveTo(x,y,x+r,y); cx.closePath();
+}
+function lighten(hex,n){const m=parseInt(hex.slice(1),16);return `rgb(${Math.min(255,((m>>16)&0xff)+n)},${Math.min(255,((m>>8)&0xff)+n)},${Math.min(255,(m&0xff)+n)})`}
+function darken(hex,n){const m=parseInt(hex.slice(1),16);return `rgb(${Math.max(0,((m>>16)&0xff)-n)},${Math.max(0,((m>>8)&0xff)-n)},${Math.max(0,(m&0xff)-n)})`}
+
+// ===================== TOP-DOWN INTERSECTION =====================
+function drawTopDown(scn) {
+  // Grass
+  const gg = ctx.createRadialGradient(CX,CY,100,CX,CY,500);
+  gg.addColorStop(0,'#2d6a28'); gg.addColorStop(1,'#1a4d16');
+  ctx.fillStyle = gg; ctx.fillRect(0,0,CW,CH);
+
+  const cfg = scn.roadConfig;
+  const isT = cfg.type === 't-junction';
+
+  // Sidewalks
+  ctx.fillStyle = '#707070';
+  const sw = 10;
+  ctx.fillRect(CX-ROAD_W/2-sw,0,sw,CH); ctx.fillRect(CX+ROAD_W/2,0,sw,CH);
+  ctx.fillRect(0,CY-ROAD_W/2-sw,CW,sw); ctx.fillRect(0,CY+ROAD_W/2,CW,sw);
+
+  // Roads
+  ctx.fillStyle = '#383838';
+  ctx.fillRect(CX-ROAD_W/2,0,ROAD_W,CH); // N-S road
+  ctx.fillRect(0,CY-ROAD_W/2,CW,ROAD_W); // E-W road
+  ctx.fillRect(CX-ROAD_W/2,CY-ROAD_W/2,ROAD_W,ROAD_W); // intersection box
+
+  // Subtle road texture
+  ctx.fillStyle = 'rgba(255,255,255,0.02)';
+  for (let i=0;i<60;i++){const rx=(i*193)%CW,ry=(i*127)%CH;ctx.fillRect(rx,ry,1,1);}
+
+  // Center line markings (dashed yellow)
+  ctx.strokeStyle = '#e8c630'; ctx.lineWidth = 2.5; ctx.setLineDash([14,10]);
+  ctx.beginPath();ctx.moveTo(CX,0);ctx.lineTo(CX,CY-ROAD_W/2-2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(CX,CY+ROAD_W/2+2);ctx.lineTo(CX,CH);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,CY);ctx.lineTo(CX-ROAD_W/2-2,CY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(CX+ROAD_W/2+2,CY);ctx.lineTo(CW,CY);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Crosswalks
+  if (cfg.crosswalk) drawCrosswalks();
+
+  // Stop lines
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+  if (cfg.control === 'stop-all' || cfg.control === 'flash-red') {
+    ['north','south','east','west'].forEach(drawStopLine);
+  } else if (cfg.control === 'signal') {
+    ['north','south','east','west'].forEach(drawStopLine);
+  }
+
+  // Traffic control
+  drawTrafficCtrl(scn);
+
+  // Pedestrians
+  if (state.pedestrianAnim) drawPedestrian(state.pedestrianAnim);
+
+  // Vehicles
+  state.vehicles.forEach(v => { if (!v.gone) drawCar(v); });
+
+  // Arrival order badges
+  if (state.animPhase === 'stopped' || state.animTime > 1.5) drawArrivalBadges();
+
+  // View label
+  drawViewLabel('Bird\'s Eye View');
+}
+
+function drawCrosswalks() {
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  const bw=5,bg=6,cnt=Math.floor(ROAD_W/(bw+bg)),off=(ROAD_W-cnt*(bw+bg)+bg)/2;
+  // North
+  for(let i=0;i<cnt;i++) ctx.fillRect(CX-ROAD_W/2+off+i*(bw+bg),CY-ROAD_W/2-16,bw,12);
+  // South
+  for(let i=0;i<cnt;i++) ctx.fillRect(CX-ROAD_W/2+off+i*(bw+bg),CY+ROAD_W/2+4,bw,12);
+  // East
+  for(let i=0;i<cnt;i++) ctx.fillRect(CX+ROAD_W/2+4,CY-ROAD_W/2+off+i*(bw+bg),12,bw);
+  // West
+  for(let i=0;i<cnt;i++) ctx.fillRect(CX-ROAD_W/2-16,CY-ROAD_W/2+off+i*(bw+bg),12,bw);
+}
+
+function drawStopLine(dir) {
+  ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();
+  switch(dir){
+    case 'north':ctx.moveTo(CX,CY-ROAD_W/2-20);ctx.lineTo(CX+ROAD_W/2,CY-ROAD_W/2-20);break;
+    case 'south':ctx.moveTo(CX-ROAD_W/2,CY+ROAD_W/2+20);ctx.lineTo(CX,CY+ROAD_W/2+20);break;
+    case 'east':ctx.moveTo(CX+ROAD_W/2+20,CY);ctx.lineTo(CX+ROAD_W/2+20,CY+ROAD_W/2);break;
+    case 'west':ctx.moveTo(CX-ROAD_W/2-20,CY-ROAD_W/2);ctx.lineTo(CX-ROAD_W/2-20,CY);break;
+  }
+  ctx.stroke();
+}
+
+function drawTrafficCtrl(scn) {
+  const cfg = scn.roadConfig;
+  if (cfg.control === 'stop-all') {
+    drawStopSign(CX+ROAD_W/2+18,CY-ROAD_W/2-24);
+    drawStopSign(CX-ROAD_W/2-18,CY+ROAD_W/2+24);
+    drawStopSign(CX+ROAD_W/2+24,CY+ROAD_W/2+18);
+    drawStopSign(CX-ROAD_W/2-24,CY-ROAD_W/2-18);
+  } else if (cfg.control === 'signal') {
+    drawTrafficLights(scn.trafficLight);
+  } else if (cfg.control === 'flash-red' || cfg.control === 'flash-yellow') {
+    drawFlashingLights(cfg.control);
+  }
+}
+
+function drawStopSign(x,y) {
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='#cc2222';ctx.strokeStyle='#fff';ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let i=0;i<8;i++){const a=Math.PI/8+i*Math.PI/4;const px=Math.cos(a)*13,py=Math.sin(a)*13;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);}
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='bold 7px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('STOP',0,0);ctx.restore();
+}
+
+function drawTrafficLights(lights) {
+  [{x:CX+ROAD_W/2+22,y:CY-ROAD_W/2-22,f:'ns'},{x:CX-ROAD_W/2-22,y:CY+ROAD_W/2+22,f:'ns'},
+   {x:CX+ROAD_W/2+22,y:CY+ROAD_W/2+22,f:'ew'},{x:CX-ROAD_W/2-22,y:CY-ROAD_W/2-22,f:'ew'}].forEach(p => {
+    const s = lights[p.f];
+    ctx.save();ctx.translate(p.x,p.y);
+    ctx.fillStyle='#1a1a1a';roundRect(ctx,-6,-15,12,30,3);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=1;ctx.stroke();
+    [{c:'#ff0000',y:-9,on:s==='red'},{c:'#ffaa00',y:0,on:s==='yellow'},{c:'#00dd00',y:9,on:s==='green'}].forEach(l => {
+      ctx.beginPath();ctx.arc(0,l.y,4,0,Math.PI*2);
+      ctx.fillStyle = l.on ? l.c : '#222';ctx.fill();
+      if(l.on){ctx.shadowColor=l.c;ctx.shadowBlur=8;ctx.fill();ctx.shadowBlur=0;}
+    });
+    ctx.restore();
+  });
+}
+
+function drawFlashingLights(type) {
+  const isRed = type === 'flash-red';
+  const on = Math.sin(state.animTime*5)>0;
+  [{x:CX+ROAD_W/2+22,y:CY-ROAD_W/2-22},{x:CX-ROAD_W/2-22,y:CY+ROAD_W/2+22},
+   {x:CX+ROAD_W/2+22,y:CY+ROAD_W/2+22},{x:CX-ROAD_W/2-22,y:CY-ROAD_W/2-22}].forEach(p => {
+    ctx.save();ctx.translate(p.x,p.y);
+    ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.arc(0,0,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle = on ? (isRed?'#ff2222':'#ffcc00') : '#331111';
+    ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
+    if(on){ctx.shadowColor=isRed?'#ff0000':'#ffcc00';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;}
+    ctx.restore();
+  });
+}
+
+function drawCar(v) {
+  ctx.save();ctx.translate(v.x,v.y);ctx.rotate(v.angle);
+
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  roundRect(ctx,-CAR_L/2+2,-CAR_W/2+2,CAR_L,CAR_W,5);ctx.fill();
+
+  // Body gradient
+  const bg = ctx.createLinearGradient(-CAR_L/2,-CAR_W/2,-CAR_L/2,CAR_W/2);
+  bg.addColorStop(0,lighten(v.color,40));bg.addColorStop(0.5,v.color);bg.addColorStop(1,darken(v.color,25));
+  ctx.fillStyle=bg;
+  roundRect(ctx,-CAR_L/2,-CAR_W/2,CAR_L,CAR_W,5);ctx.fill();
+  ctx.strokeStyle=darken(v.color,50);ctx.lineWidth=1;ctx.stroke();
+
+  // Windshield (front = positive x)
+  ctx.fillStyle='rgba(140,190,240,0.7)';
+  roundRect(ctx,CAR_L/2-14,-CAR_W/2+3,10,CAR_W-6,2);ctx.fill();
+
+  // Rear window
+  ctx.fillStyle='rgba(140,190,240,0.35)';
+  roundRect(ctx,-CAR_L/2+3,-CAR_W/2+5,7,CAR_W-10,1);ctx.fill();
+
+  // Headlights
+  ctx.fillStyle='#ffffcc';
+  ctx.beginPath();ctx.arc(CAR_L/2-1,-CAR_W/2+4,2.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(CAR_L/2-1,CAR_W/2-4,2.5,0,Math.PI*2);ctx.fill();
+
+  // Taillights
+  ctx.fillStyle='#cc2222';
+  ctx.beginPath();ctx.arc(-CAR_L/2+1,-CAR_W/2+4,2.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(-CAR_L/2+1,CAR_W/2-4,2.5,0,Math.PI*2);ctx.fill();
+
+  // Turn signals
+  if (v.intent && v.intent !== 'straight' && !v.proceeding) {
+    const blink = Math.sin(state.animTime*7)>0;
+    if (blink) {
+      ctx.fillStyle='#ffaa00';
+      const side = v.intent === 'left' ? -1 : 1;
+      ctx.beginPath();ctx.arc(CAR_L/2-1,side*(CAR_W/2-2),2,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(-CAR_L/2+1,side*(CAR_W/2-2),2,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  // Label
+  ctx.fillStyle='#fff';ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=3;ctx.fillText(v.id,0,0);ctx.shadowBlur=0;
+
+  ctx.restore();
+
+  // Player highlight
+  if (v.isPlayer) {
+    ctx.save();ctx.strokeStyle='#f59e0b';ctx.lineWidth=2.5;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.arc(v.x,v.y,CAR_L/2+8,0,Math.PI*2);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#f59e0b';ctx.font='bold 10px Arial';ctx.textAlign='center';
+    ctx.fillText('YOU',v.x,v.y-CAR_L/2-13);
+    ctx.restore();
+  }
+}
+
+function drawArrivalBadges() {
+  const sorted = [...state.vehicles].sort((a,b)=>a.arrivalDelay-b.arrivalDelay);
+  let order=1;
+  sorted.forEach(v => {
+    if(v.gone)return;
+    let lx=v.x,ly=v.y;
+    switch(v.approach){case 'north':lx+=28;ly-=5;break;case 'south':lx-=28;ly+=5;break;case 'east':lx+=5;ly+=28;break;case 'west':lx-=5;ly-=28;break;}
+    ctx.fillStyle='rgba(0,0,0,0.65)';roundRect(ctx,lx-12,ly-9,24,18,5);ctx.fill();
+    ctx.fillStyle='#f59e0b';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    const sfx = order===1?'st':order===2?'nd':order===3?'rd':'th';
+    ctx.fillText(order+sfx,lx,ly);order++;
+  });
+}
+
+function drawPedestrian(ped) {
+  ctx.save();ctx.translate(ped.x,ped.y);
+  ctx.fillStyle='#e8b84d';ctx.beginPath();ctx.arc(0,-6,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#4477bb';ctx.fillRect(-4,-1,8,12);
+  const ls = Math.sin(state.animTime*8)*4;
+  ctx.strokeStyle='#3355aa';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(-2,11);ctx.lineTo(-2+ls,18);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(2,11);ctx.lineTo(2-ls,18);ctx.stroke();
+  ctx.restore();
+}
+
+function drawViewLabel(text) {
+  ctx.fillStyle='rgba(0,0,0,0.5)';roundRect(ctx,10,10,text.length*7+16,24,8);ctx.fill();
+  ctx.fillStyle='#8899aa';ctx.font='11px Arial';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText(text,18,22);
+}
+
+// ===================== THREE.JS FIRST-PERSON VIEW =====================
+let scene3D, camera3D, renderer3D, scenarioGroup;
+const canvas3d = document.getElementById('scene3d');
+
+function init3D() {
+  scene3D = new THREE.Scene();
+  scene3D.background = new THREE.Color(0x87CEEB);
+  scene3D.fog = new THREE.FogExp2(0x9bb8d4, 0.008);
+
+  camera3D = new THREE.PerspectiveCamera(60, CW/CH, 0.1, 200);
+  camera3D.position.set(1.8, 1.2, 0.5);
+  camera3D.lookAt(1.8, 1.0, -20);
+
+  renderer3D = new THREE.WebGLRenderer({canvas: canvas3d, antialias: true});
+  renderer3D.setSize(CW, CH, false);
+  renderer3D.shadowMap.enabled = true;
+  renderer3D.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer3D.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer3D.toneMappingExposure = 1.1;
+
+  // === LIGHTING (warm afternoon sun) ===
+  const sun = new THREE.DirectionalLight(0xfff4e0, 1.0);
+  sun.position.set(30, 50, 20); sun.castShadow = true;
+  sun.shadow.mapSize.width = 2048; sun.shadow.mapSize.height = 2048;
+  sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 150;
+  sun.shadow.camera.left = -40; sun.shadow.camera.right = 40;
+  sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40;
+  sun.shadow.bias = -0.001;
+  scene3D.add(sun);
+  scene3D.add(new THREE.AmbientLight(0x506070, 0.45));
+  scene3D.add(new THREE.HemisphereLight(0x88bbee, 0x446633, 0.5));
+
+  // === SKY DOME with gradient ===
+  const skyGeo = new THREE.SphereGeometry(140, 24, 16);
+  const skyCount = skyGeo.attributes.position.count;
+  const skyColors = new Float32Array(skyCount * 3);
+  const cTop = new THREE.Color(0x2266aa);
+  const cMid = new THREE.Color(0x88bbee);
+  const cHorizon = new THREE.Color(0xd4e4f0);
+  for(let i = 0; i < skyCount; i++) {
+    const y = skyGeo.attributes.position.getY(i);
+    const t = Math.max(0, y / 140);
+    let c;
+    if(t > 0.3) c = cTop.clone().lerp(cMid, 1 - (t - 0.3) / 0.7);
+    else c = cHorizon.clone().lerp(cMid, t / 0.3);
+    skyColors[i*3] = c.r; skyColors[i*3+1] = c.g; skyColors[i*3+2] = c.b;
+  }
+  skyGeo.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
+  const skyMat = new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.BackSide});
+  scene3D.add(new THREE.Mesh(skyGeo, skyMat));
+
+  // Clouds
+  const cloudMat = new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.6});
+  [[-20,55,-60,6,1.5,8],[-5,52,-80,8,1.8,10],[25,58,-50,5,1.2,7],[10,50,-90,7,1.6,9],
+   [-30,54,-40,4,1,6],[35,56,-70,6,1.4,8],[-15,53,-100,5,1.3,7]].forEach(([cx,cy,cz,rw,rh,rd]) => {
+    const cg = new THREE.Group();
+    for(let i = 0; i < 5; i++){
+      const s = 0.6 + Math.random() * 0.5;
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(s * rh, 7, 5), cloudMat);
+      puff.position.set((Math.random()-0.5)*rw, (Math.random()-0.5)*rh*0.4, (Math.random()-0.5)*rd*0.3);
+      puff.scale.set(1.8, 0.7, 1);
+      cg.add(puff);
+    }
+    cg.position.set(cx, cy, cz);
+    scene3D.add(cg);
+  });
+
+  // Sun disk
+  const sunDisk = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12),
+    new THREE.MeshBasicMaterial({color: 0xffffdd}));
+  sunDisk.position.set(30, 50, 20);
+  scene3D.add(sunDisk);
+
+  // === GROUND ===
+  const groundGeo = new THREE.PlaneGeometry(300, 300);
+  const groundMat = new THREE.MeshStandardMaterial({color: 0x3d8a34, roughness: 0.9, metalness: 0});
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI/2; ground.receiveShadow = true;
+  scene3D.add(ground);
+
+  // Grass strips between sidewalk and buildings
+  const grassStripMat = new THREE.MeshStandardMaterial({color: 0x4a9a3e, roughness: 0.85});
+  [[-6.8, -50], [6.8, -50]].forEach(([gx, gz]) => {
+    const gs = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 200), grassStripMat);
+    gs.rotation.x = -Math.PI/2; gs.position.set(gx, 0.005, gz); scene3D.add(gs);
+  });
+
+  // === ROAD with subtle variation ===
+  const roadMat = new THREE.MeshStandardMaterial({color: 0x484850, roughness: 0.85, metalness: 0});
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 200), roadMat);
+  road.rotation.x = -Math.PI/2; road.position.set(0, 0.01, -50);
+  road.receiveShadow = true; scene3D.add(road);
+
+  // Road patches (worn asphalt)
+  const patchMat = new THREE.MeshStandardMaterial({color: 0x525258, roughness: 0.9});
+  [[-1, -15, 3, 4],[ 1.5, -35, 2.5, 3],[-0.5, -55, 3.5, 5],[0.8, -75, 2, 3]].forEach(([px,pz,pw,pd]) => {
+    const patch = new THREE.Mesh(new THREE.PlaneGeometry(pw, pd), patchMat);
+    patch.rotation.x = -Math.PI/2; patch.position.set(px, 0.012, pz); scene3D.add(patch);
+  });
+
+  // Storm drains along curbs
+  const drainMat = new THREE.MeshStandardMaterial({color: 0x222225, roughness: 0.95});
+  [[-3.65, -50], [3.65, -50]].forEach(([dx, dz]) => {
+    const drain = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 200), drainMat);
+    drain.rotation.x = -Math.PI/2; drain.position.set(dx, 0.013, dz); scene3D.add(drain);
+  });
+
+  // === SIDEWALKS (concrete with joints) ===
+  const swMat = new THREE.MeshStandardMaterial({color: 0xaaaaaa, roughness: 0.75});
+  [[-5, 0.07, -50],[5, 0.07, -50]].forEach(([sx,sy,sz]) => {
+    const sw = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 200), swMat);
+    sw.position.set(sx, sy, sz); sw.receiveShadow = true; scene3D.add(sw);
+  });
+
+  // Sidewalk crack joints
+  const jointMat = new THREE.MeshBasicMaterial({color: 0x888888});
+  for(let jz = 5; jz > -100; jz -= 2) {
+    [[-5],[5]].forEach(([jx]) => {
+      const joint = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.04), jointMat);
+      joint.rotation.x = -Math.PI/2; joint.position.set(jx, 0.151, jz); scene3D.add(joint);
+    });
+  }
+
+  // Curbs (taller, more visible)
+  const curbMat = new THREE.MeshStandardMaterial({color: 0xcccccc, roughness: 0.6});
+  [[-3.8],[3.8]].forEach(([cx]) => {
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 200), curbMat);
+    curb.position.set(cx, 0.1, -50); scene3D.add(curb);
+  });
+
+  // White edge lines
+  const edgeMat = new THREE.MeshBasicMaterial({color: 0xeeeeee});
+  [[-3.5],[3.5]].forEach(([lx]) => {
+    const line = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 200), edgeMat);
+    line.rotation.x = -Math.PI/2; line.position.set(lx, 0.015, -50); scene3D.add(line);
+  });
+
+  // Yellow center dashes
+  for(let z = 5; z > -100; z -= 3) {
+    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 2.5),
+      new THREE.MeshBasicMaterial({color: 0xe0b830}));
+    dash.rotation.x = -Math.PI/2; dash.position.set(0, 0.015, z); scene3D.add(dash);
+  }
+
+  // === CROSSWALK MARKINGS ===
+  const cwMat = new THREE.MeshBasicMaterial({color: 0xeeeeee});
+  [-25, -60].forEach(cz => {
+    for(let i = -3; i <= 3; i += 1) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 3), cwMat);
+      stripe.rotation.x = -Math.PI/2; stripe.position.set(i, 0.016, cz); scene3D.add(stripe);
+    }
+  });
+
+  // Manhole covers
+  const manholeMat = new THREE.MeshStandardMaterial({color: 0x333338, roughness: 0.95, metalness: 0.3});
+  [-20, -50, -80].forEach(mz => {
+    const mh = new THREE.Mesh(new THREE.CircleGeometry(0.35, 16), manholeMat);
+    mh.rotation.x = -Math.PI/2; mh.position.set(0.8, 0.013, mz); scene3D.add(mh);
+    const mhRim = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.38, 16), new THREE.MeshStandardMaterial({color:0x444448, metalness:0.4}));
+    mhRim.rotation.x = -Math.PI/2; mhRim.position.set(0.8, 0.014, mz); scene3D.add(mhRim);
+  });
+
+  // === TREES (multi-sphere canopies, varied) ===
+  const treePositions = [
+    [-7,-5,1],[-6.5,-15,2],[-7.5,-28,0],[-6,-42,1],[-7,-58,2],[-6.5,-72,0],[-7,-90,1],
+    [7,-8,2],[6.5,-20,0],[7.5,-34,1],[6,-48,2],[7,-62,0],[6.5,-78,1],[7,-95,2]
+  ];
+  const trunkMat = new THREE.MeshStandardMaterial({color: 0x5a3a1a, roughness: 0.9});
+  treePositions.forEach(([tx, tz, ttype]) => {
+    makeTree(tx, tz, ttype);
+  });
+
+  function makeTree(x, z, type) {
+    const trunkH = 1.8 + type * 0.6;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, trunkH, 6), trunkMat);
+    trunk.position.set(x, trunkH/2, z); trunk.castShadow = true; scene3D.add(trunk);
+    const greens = [0x2a7a22, 0x338833, 0x267a28, 0x2d8830, 0x1f6a1f];
+    const baseY = trunkH + 0.4;
+    if(type === 0) { // Wide bushy
+      [[-0.3,0,0,1.3],[0.4,0.3,0.2,1.1],[0,0.5,-0.2,1.0],[-0.2,-0.1,0.3,0.9]].forEach(([ox,oy,oz,r]) => {
+        const lm = new THREE.MeshStandardMaterial({color: greens[Math.floor(Math.random()*greens.length)], roughness:0.85});
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), lm);
+        leaf.position.set(x+ox, baseY+oy, z+oz); leaf.castShadow = true; scene3D.add(leaf);
+      });
+    } else if(type === 1) { // Tall narrow
+      [[0,0,0,0.9],[0,0.7,0,0.75],[0,1.3,0,0.55]].forEach(([ox,oy,oz,r]) => {
+        const lm = new THREE.MeshStandardMaterial({color: greens[Math.floor(Math.random()*greens.length)], roughness:0.85});
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), lm);
+        leaf.position.set(x+ox, baseY+oy, z+oz); leaf.castShadow = true; scene3D.add(leaf);
+      });
+    } else { // Medium round cluster
+      [[-0.2,0.1,0.1,1.1],[0.3,0.3,-0.1,1.0],[0,0.6,0,0.85],[-0.15,-0.2,-0.2,0.8]].forEach(([ox,oy,oz,r]) => {
+        const lm = new THREE.MeshStandardMaterial({color: greens[Math.floor(Math.random()*greens.length)], roughness:0.85});
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), lm);
+        leaf.position.set(x+ox, baseY+oy, z+oz); leaf.castShadow = true; scene3D.add(leaf);
+      });
+    }
+  }
+
+  // Shrubs along sidewalks
+  const shrubMat = new THREE.MeshStandardMaterial({color: 0x2f8a28, roughness: 0.9});
+  for(let sz = -3; sz > -95; sz -= 7) {
+    [[-5.5 + (Math.sin(sz)*0.3)],[5.5 + (Math.cos(sz)*0.3)]].forEach(([sx]) => {
+      const shrub = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 4), shrubMat);
+      shrub.position.set(sx, 0.25, sz); scene3D.add(shrub);
+    });
+  }
+
+  // === BUILDINGS (varied architecture) ===
+  buildBuildings();
+
+  // === STREET FURNITURE ===
+  buildStreetFurniture();
+
+  // === DASHBOARD & INTERIOR ===
+  buildDashboard();
+
+  // Scenario-specific group (cleared per scenario)
+  scenarioGroup = new THREE.Group();
+  scene3D.add(scenarioGroup);
+}
+
+// ─── Building Generator ───
+function buildBuildings() {
+  const buildingDefs = [
+    // Left side: x, z, w, d, h, color, type
+    {x:-9, z:-8, w:7, d:6, h:10, c:0x8B7355, type:'shop'},
+    {x:-9.5, z:-20, w:8, d:7, h:16, c:0x7a6a5a, type:'office'},
+    {x:-9, z:-33, w:6, d:5, h:8, c:0xaa6644, type:'shop'},
+    {x:-9.5, z:-45, w:9, d:7, h:18, c:0x887766, type:'apartment'},
+    {x:-9, z:-58, w:7, d:6, h:12, c:0x7B6B5B, type:'office'},
+    {x:-9.5, z:-72, w:8, d:6, h:14, c:0x8a7a6a, type:'apartment'},
+    {x:-9, z:-86, w:6, d:5, h:9, c:0x996655, type:'shop'},
+    // Right side
+    {x:9, z:-5, w:7, d:5, h:9, c:0x6a7a8a, type:'shop'},
+    {x:9.5, z:-17, w:8, d:7, h:14, c:0x7a8a6a, type:'apartment'},
+    {x:9, z:-30, w:6, d:5, h:11, c:0x8a7a6a, type:'office'},
+    {x:9.5, z:-43, w:9, d:7, h:17, c:0x6a8a7a, type:'office'},
+    {x:9, z:-56, w:7, d:6, h:10, c:0x7a7a8a, type:'shop'},
+    {x:9.5, z:-69, w:8, d:6, h:15, c:0x8a8a6a, type:'apartment'},
+    {x:9, z:-83, w:6, d:5, h:8, c:0x7a8a8a, type:'shop'}
+  ];
+
+  const winGlassMat = new THREE.MeshStandardMaterial({color: 0x88bbdd, roughness: 0.2, metalness: 0.3, transparent: true, opacity: 0.7});
+  const winFrameMat = new THREE.MeshStandardMaterial({color: 0x555555, roughness: 0.5});
+  const awningColors = [0xcc3333, 0x3366aa, 0x33aa66, 0xcc8833, 0x8833aa, 0xaa3366];
+
+  buildingDefs.forEach((b, bi) => {
+    const isLeft = b.x < 0;
+    const faceSide = isLeft ? 1 : -1;
+    const faceX = b.x + faceSide * b.w / 2;
+
+    // Main body
+    const bodyMat = new THREE.MeshStandardMaterial({color: b.c, roughness: 0.75, metalness: 0.05});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), bodyMat);
+    body.position.set(b.x, b.h/2, b.z); body.castShadow = true; body.receiveShadow = true;
+    scene3D.add(body);
+
+    // Ground floor storefront (different color)
+    const sfH = 3.5;
+    const sfColor = b.type === 'shop' ? darken3D(b.c, -30) : darken3D(b.c, 15);
+    const sfMat = new THREE.MeshStandardMaterial({color: sfColor, roughness: 0.6});
+    const sf = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.02, sfH, b.d + 0.02), sfMat);
+    sf.position.set(b.x, sfH/2, b.z); scene3D.add(sf);
+
+    // Storefront door
+    const doorMat = new THREE.MeshStandardMaterial({color: 0x443322, roughness: 0.5});
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.4, 1.2), doorMat);
+    door.position.set(faceX + faceSide * 0.01, 1.2, b.z); scene3D.add(door);
+    // Door frame
+    const dfMat = new THREE.MeshStandardMaterial({color: 0x333333, roughness: 0.4});
+    const dframe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.6, 1.4), dfMat);
+    dframe.position.set(faceX + faceSide * 0.005, 1.3, b.z); scene3D.add(dframe);
+
+    // Awning over storefront
+    if(b.type === 'shop' || bi % 2 === 0) {
+      const awCol = awningColors[bi % awningColors.length];
+      const awnMat = new THREE.MeshStandardMaterial({color: awCol, roughness: 0.7});
+      const awn = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, b.d * 0.6), awnMat);
+      awn.position.set(faceX + faceSide * 0.8, 3.3, b.z);
+      awn.rotation.z = faceSide * 0.3;
+      scene3D.add(awn);
+      // Awning front edge
+      const awnEdge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, b.d * 0.6), awnMat);
+      awnEdge.position.set(faceX + faceSide * 1.4, 3.0, b.z);
+      scene3D.add(awnEdge);
+    }
+
+    // Windows grid (recessed look)
+    for(let wy = sfH + 1.5; wy < b.h - 1; wy += 2.8) {
+      for(let wz = b.z - b.d/2 + 1.2; wz < b.z + b.d/2 - 0.5; wz += 2) {
+        // Window recess
+        const recess = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.4, 1), new THREE.MeshStandardMaterial({color: darken3D(b.c, 30), roughness: 0.8}));
+        recess.position.set(faceX, wy, wz); scene3D.add(recess);
+        // Glass pane
+        const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.2), winGlassMat);
+        glass.position.set(faceX + faceSide * 0.08, wy, wz);
+        glass.rotation.y = isLeft ? 0 : Math.PI;
+        scene3D.add(glass);
+        // Window sill
+        const sill = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 1.05), new THREE.MeshStandardMaterial({color: 0xcccccc, roughness: 0.5}));
+        sill.position.set(faceX + faceSide * 0.06, wy - 0.7, wz); scene3D.add(sill);
+      }
+    }
+
+    // Large storefront windows
+    for(let wz = b.z - b.d/2 + 1.8; wz < b.z + b.d/2 - 1; wz += 2.5) {
+      const sfGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2), winGlassMat);
+      sfGlass.position.set(faceX + faceSide * 0.03, 1.8, wz);
+      sfGlass.rotation.y = isLeft ? 0 : Math.PI;
+      scene3D.add(sfGlass);
+    }
+
+    // Cornice at roofline
+    const corniceMat = new THREE.MeshStandardMaterial({color: darken3D(b.c, -20), roughness: 0.5});
+    const cornice = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.4, 0.3, b.d + 0.4), corniceMat);
+    cornice.position.set(b.x, b.h + 0.05, b.z); scene3D.add(cornice);
+    // Parapet (thin wall above roof)
+    const parapet = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.3, 0.6, 0.15), corniceMat);
+    parapet.position.set(b.x, b.h + 0.4, b.z + (isLeft ? -b.d/2 : b.d/2)); scene3D.add(parapet);
+
+    // Rooftop details
+    if(b.type === 'apartment' || b.h > 12) {
+      // Water tank
+      const tankMat = new THREE.MeshStandardMaterial({color: 0x665544, roughness: 0.8});
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 1.5, 8), tankMat);
+      tank.position.set(b.x + 1.5, b.h + 0.95, b.z - 0.5); scene3D.add(tank);
+      const tankTop = new THREE.Mesh(new THREE.ConeGeometry(0.65, 0.4, 8), tankMat);
+      tankTop.position.set(b.x + 1.5, b.h + 1.9, b.z - 0.5); scene3D.add(tankTop);
+      // Tank legs
+      for(let a = 0; a < 4; a++) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.5, 4),
+          new THREE.MeshStandardMaterial({color: 0x444444}));
+        leg.position.set(b.x + 1.5 + Math.cos(a*Math.PI/2)*0.45, b.h + 0.2, b.z - 0.5 + Math.sin(a*Math.PI/2)*0.45);
+        scene3D.add(leg);
+      }
+    }
+    if(b.type === 'office' || b.h > 10) {
+      // AC units
+      const acMat = new THREE.MeshStandardMaterial({color: 0x888890, roughness: 0.6, metalness: 0.2});
+      const ac = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.8), acMat);
+      ac.position.set(b.x - 1.5, b.h + 0.3, b.z + 1); scene3D.add(ac);
+      // AC fan grill
+      const grill = new THREE.Mesh(new THREE.CircleGeometry(0.2, 8), new THREE.MeshStandardMaterial({color:0x555555}));
+      grill.position.set(b.x - 1.5, b.h + 0.35, b.z + 1.41); scene3D.add(grill);
+    }
+
+    // Fire escape on some tall buildings
+    if((b.type === 'apartment' || b.h > 13) && bi % 3 === 0) {
+      const feMat = new THREE.MeshStandardMaterial({color: 0x333333, roughness: 0.6, metalness: 0.3});
+      for(let fy = sfH + 1; fy < b.h - 2; fy += 3) {
+        // Platform
+        const plat = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 1.8), feMat);
+        plat.position.set(faceX + faceSide * 0.8, fy, b.z); scene3D.add(plat);
+        // Railing
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.6, 0.03), feMat);
+        rail.position.set(faceX + faceSide * 1.6, fy + 0.3, b.z - 0.85); scene3D.add(rail);
+        const rail2 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.6, 0.03), feMat);
+        rail2.position.set(faceX + faceSide * 1.6, fy + 0.3, b.z + 0.85); scene3D.add(rail2);
+        const railTop = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 1.8), feMat);
+        railTop.position.set(faceX + faceSide * 1.6, fy + 0.6, b.z); scene3D.add(railTop);
+        // Ladder between levels
+        if(fy > sfH + 2) {
+          const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.5, 0.03), feMat);
+          ladder.position.set(faceX + faceSide * 1.2, fy - 1.3, b.z + 0.5); scene3D.add(ladder);
+        }
+      }
+    }
+  });
+}
+
+// ─── Street Furniture Generator ───
+function buildStreetFurniture() {
+  // Street lights
+  const poleMat = new THREE.MeshStandardMaterial({color: 0x444444, roughness: 0.4, metalness: 0.3});
+  const lampMat = new THREE.MeshBasicMaterial({color: 0xffffdd});
+  [[-4.2,-10],[-4.2,-30],[-4.2,-50],[-4.2,-70],[-4.2,-90],
+   [4.2,-5],[4.2,-25],[4.2,-45],[4.2,-65],[4.2,-85]].forEach(([lx,lz]) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 5, 6), poleMat);
+    pole.position.set(lx, 2.5, lz); scene3D.add(pole);
+    // Arm
+    const side = lx > 0 ? -1 : 1;
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.5, 4), poleMat);
+    arm.rotation.z = side * Math.PI / 3;
+    arm.position.set(lx + side * 0.6, 5.2, lz); scene3D.add(arm);
+    // Lamp head
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.25), new THREE.MeshStandardMaterial({color: 0x555555, metalness: 0.3}));
+    lamp.position.set(lx + side * 1.1, 5.3, lz); scene3D.add(lamp);
+    // Light globe
+    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), lampMat);
+    globe.position.set(lx + side * 1.1, 5.2, lz); scene3D.add(globe);
+  });
+
+  // Power lines between poles (same side)
+  const wireMat = new THREE.LineBasicMaterial({color: 0x333333});
+  for(let side = 0; side < 2; side++) {
+    const baseX = side === 0 ? -4.2 : 4.2;
+    const zPositions = side === 0 ? [-10,-30,-50,-70,-90] : [-5,-25,-45,-65,-85];
+    for(let i = 0; i < zPositions.length - 1; i++) {
+      const pts = [];
+      const z0 = zPositions[i], z1 = zPositions[i+1];
+      for(let t = 0; t <= 10; t++) {
+        const frac = t / 10;
+        const sag = Math.sin(frac * Math.PI) * 0.4;
+        pts.push(new THREE.Vector3(baseX, 5.5 - sag, z0 + (z1 - z0) * frac));
+      }
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+      scene3D.add(new THREE.Line(lineGeo, wireMat));
+    }
+  }
+
+  // Fire hydrants
+  [[-4.5, -18],[4.5, -38],[-4.5, -58],[4.5, -78]].forEach(([hx, hz]) => {
+    const hg = new THREE.Group();
+    const hBody = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.65, 8),
+      new THREE.MeshStandardMaterial({color: 0xcc2222, roughness: 0.6}));
+    hBody.position.y = 0.33; hg.add(hBody);
+    const hCap = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.1, 8),
+      new THREE.MeshStandardMaterial({color: 0xdd3333, roughness: 0.5}));
+    hCap.position.y = 0.7; hg.add(hCap);
+    const hTop = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4),
+      new THREE.MeshStandardMaterial({color: 0xdd3333}));
+    hTop.position.y = 0.78; hg.add(hTop);
+    // Nozzles
+    [[-1],[1]].forEach(([ns]) => {
+      const noz = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.15, 6),
+        new THREE.MeshStandardMaterial({color: 0xaa1111}));
+      noz.rotation.z = Math.PI/2; noz.position.set(ns * 0.14, 0.4, 0); hg.add(noz);
+    });
+    hg.position.set(hx, 0, hz); scene3D.add(hg);
+  });
+
+  // Mailboxes
+  [[4.8, -15],[-4.8, -42]].forEach(([mx, mz]) => {
+    const mg = new THREE.Group();
+    const mPost = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 4),
+      new THREE.MeshStandardMaterial({color: 0x555555}));
+    mPost.position.y = 0.55; mg.add(mPost);
+    const mBox = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.35),
+      new THREE.MeshStandardMaterial({color: 0x2244aa, roughness: 0.5}));
+    mBox.position.y = 1.35; mg.add(mBox);
+    // Rounded top
+    const mTop = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.35, 8, 1, false, 0, Math.PI),
+      new THREE.MeshStandardMaterial({color: 0x2244aa, roughness: 0.5}));
+    mTop.rotation.z = Math.PI/2; mTop.rotation.y = Math.PI/2;
+    mTop.position.y = 1.6; mg.add(mTop);
+    mg.position.set(mx, 0, mz); scene3D.add(mg);
+  });
+
+  // Trash cans
+  [[-4.6, -8],[4.6, -22],[-4.6, -48],[4.6, -62],[-4.6, -82]].forEach(([tx, tz]) => {
+    const tc = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.7, 8),
+      new THREE.MeshStandardMaterial({color: 0x333333, roughness: 0.7}));
+    tc.position.set(tx, 0.35, tz); scene3D.add(tc);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.04, 8),
+      new THREE.MeshStandardMaterial({color: 0x3a3a3a}));
+    lid.position.set(tx, 0.72, tz); scene3D.add(lid);
+  });
+
+  // Benches
+  const benchWoodMat = new THREE.MeshStandardMaterial({color: 0x7a5533, roughness: 0.8});
+  const benchMetalMat = new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.4, roughness: 0.4});
+  [[5.2, -12, 0],[5.2, -52, 0],[-5.2, -32, Math.PI],[-5.2, -72, Math.PI]].forEach(([bx, bz, ry]) => {
+    const bg = new THREE.Group();
+    // Seat
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.4), benchWoodMat);
+    seat.position.y = 0.45; bg.add(seat);
+    // Back
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.05), benchWoodMat);
+    back.position.set(0, 0.7, -0.18); bg.add(back);
+    // Legs
+    [[-0.5],[0.5]].forEach(([lox]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.45, 0.35), benchMetalMat);
+      leg.position.set(lox, 0.22, -0.02); bg.add(leg);
+    });
+    bg.position.set(bx, 0, bz); bg.rotation.y = ry; scene3D.add(bg);
+  });
+
+  // Parking meters
+  [[4.3, -9],[-4.3, -28],[4.3, -46],[-4.3, -66]].forEach(([px, pz]) => {
+    const pg = new THREE.Group();
+    const pp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.2, 6), poleMat);
+    pp.position.y = 0.6; pg.add(pp);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.25, 0.12),
+      new THREE.MeshStandardMaterial({color: 0x777777, metalness: 0.3}));
+    head.position.y = 1.3; pg.add(head);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.14),
+      new THREE.MeshBasicMaterial({color: 0x222222}));
+    face.position.set(0, 1.33, 0.065); pg.add(face);
+    pg.position.set(px, 0, pz); scene3D.add(pg);
+  });
+
+  // Newspaper boxes
+  [[4.9, -34],[-4.9, -55]].forEach(([nx, nz]) => {
+    const nb = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.35),
+      new THREE.MeshStandardMaterial({color: 0xdd6622, roughness: 0.6}));
+    nb.position.set(nx, 0.35, nz); scene3D.add(nb);
+    const nbGlass = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.35),
+      new THREE.MeshStandardMaterial({color: 0xaaddff, transparent: true, opacity: 0.5}));
+    nbGlass.position.set(nx + (nx > 0 ? -0.201 : 0.201), 0.45, nz);
+    nbGlass.rotation.y = nx > 0 ? Math.PI : 0;
+    scene3D.add(nbGlass);
+  });
+
+  // Bus stop (one location)
+  const busStopX = 4.5, busStopZ = -40;
+  // Sign pole
+  const bsPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3, 6), poleMat);
+  bsPole.position.set(busStopX, 1.5, busStopZ); scene3D.add(bsPole);
+  // Sign
+  const bsSign = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.05),
+    new THREE.MeshStandardMaterial({color: 0x2255aa}));
+  bsSign.position.set(busStopX, 3.1, busStopZ); scene3D.add(bsSign);
+  // BUS text on sign (small white plane)
+  const busText = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.2),
+    new THREE.MeshBasicMaterial({color: 0xffffff}));
+  busText.position.set(busStopX - 0.03, 3.1, busStopZ - 0.03); scene3D.add(busText);
+  // Shelter roof
+  const shelterRoof = new THREE.Mesh(new THREE.BoxGeometry(2, 0.08, 1.2),
+    new THREE.MeshStandardMaterial({color: 0x666666, metalness: 0.3}));
+  shelterRoof.position.set(busStopX + 0.5, 2.6, busStopZ); scene3D.add(shelterRoof);
+  // Shelter back panel
+  const shelterBack = new THREE.Mesh(new THREE.BoxGeometry(2, 2.5, 0.05),
+    new THREE.MeshStandardMaterial({color: 0x88bbdd, transparent: true, opacity: 0.4}));
+  shelterBack.position.set(busStopX + 0.5, 1.3, busStopZ + 0.57); scene3D.add(shelterBack);
+}
+
+// ─── Dashboard & Interior ───
+function buildDashboard() {
+  const DX = 1.8; // center x of driver position
+  // Dashboard is built as a child group so it can be positioned relative to camera
+  const dashGroup = new THREE.Group();
+
+  // A-Pillars (dark angled strips at left/right edges of windshield)
+  const pillarMat = new THREE.MeshBasicMaterial({color: 0x2a2a30});
+  const pillarL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.6, 0.05), pillarMat);
+  pillarL.position.set(DX - 1.5, 0.8, -1.1); pillarL.rotation.z = 0.12; dashGroup.add(pillarL);
+  const pillarR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.6, 0.05), pillarMat);
+  pillarR.position.set(DX + 1.5, 0.8, -1.1); pillarR.rotation.z = -0.12; dashGroup.add(pillarR);
+
+  // Windshield frame top (thin dark border at very top of windshield)
+  const frameMat = new THREE.MeshBasicMaterial({color: 0x222228});
+  const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.04, 0.04), frameMat);
+  frameTop.position.set(DX, 1.55, -1.1); dashGroup.add(frameTop);
+
+  // Rearview mirror (sits at top-center of windshield, near frame)
+  const mirrorArm = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.02), new THREE.MeshBasicMaterial({color: 0x333333}));
+  mirrorArm.position.set(DX, 1.48, -1.1); dashGroup.add(mirrorArm);
+  const mirrorBody = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.025),
+    new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.3}));
+  mirrorBody.position.set(DX, 1.42, -1.1); dashGroup.add(mirrorBody);
+  const mirrorGlass = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.07),
+    new THREE.MeshStandardMaterial({color: 0x667788, roughness: 0.1, metalness: 0.8}));
+  mirrorGlass.position.set(DX, 1.42, -1.08); dashGroup.add(mirrorGlass);
+
+  // Dashboard body -- positioned LOW so it sits at bottom of viewport
+  const dashMat = new THREE.MeshStandardMaterial({color: 0x3a3a42, roughness: 0.85});
+  const dashMain = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.2, 0.5), dashMat);
+  dashMain.position.set(DX, 0.55, -0.6); dashMain.rotation.x = -0.15; dashGroup.add(dashMain);
+  // Dashboard top surface (thin lip visible from driver POV)
+  const dashTop = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.04, 0.6), dashMat);
+  dashTop.position.set(DX, 0.66, -0.7); dashGroup.add(dashTop);
+
+  // Instrument cluster (dark recess behind steering wheel)
+  const clusterMat = new THREE.MeshBasicMaterial({color: 0x111115});
+  const cluster = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.25, 0.03), clusterMat);
+  cluster.position.set(DX, 0.6, -0.82); dashGroup.add(cluster);
+  // Speedometer
+  const speedoMat = new THREE.MeshBasicMaterial({color: 0x1a1a1a});
+  const speedo = new THREE.Mesh(new THREE.CircleGeometry(0.07, 16), speedoMat);
+  speedo.position.set(DX - 0.1, 0.6, -0.815); dashGroup.add(speedo);
+  const speedoRim = new THREE.Mesh(new THREE.RingGeometry(0.06, 0.07, 16),
+    new THREE.MeshBasicMaterial({color: 0xcccccc}));
+  speedoRim.position.set(DX - 0.1, 0.6, -0.814); dashGroup.add(speedoRim);
+  // Tachometer
+  const tacho = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), speedoMat);
+  tacho.position.set(DX + 0.1, 0.6, -0.815); dashGroup.add(tacho);
+  const tachoRim = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.06, 16),
+    new THREE.MeshBasicMaterial({color: 0xaaaaaa}));
+  tachoRim.position.set(DX + 0.1, 0.6, -0.814); dashGroup.add(tachoRim);
+  // Gauge needles
+  const needleMat = new THREE.MeshBasicMaterial({color: 0xff3300});
+  const needle1 = new THREE.Mesh(new THREE.PlaneGeometry(0.008, 0.05), needleMat);
+  needle1.position.set(DX - 0.1, 0.6, -0.813); needle1.rotation.z = -0.4; dashGroup.add(needle1);
+  const needle2 = new THREE.Mesh(new THREE.PlaneGeometry(0.008, 0.04), needleMat);
+  needle2.position.set(DX + 0.1, 0.6, -0.813); needle2.rotation.z = 0.2; dashGroup.add(needle2);
+
+  // Steering wheel (sits low, below center of view)
+  const wheelMat = new THREE.MeshStandardMaterial({color: 0x2a2a2a, roughness: 0.6});
+  const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.014, 8, 32), wheelMat);
+  wheelRim.position.set(DX, 0.55, -0.45); wheelRim.rotation.x = -0.55; dashGroup.add(wheelRim);
+  // Spokes (3-spoke design)
+  const spokeMat = new THREE.MeshStandardMaterial({color: 0x333333, roughness: 0.5});
+  [0, 2.2, 4.1].forEach(angle => {
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.01, 0.01), spokeMat);
+    spoke.position.set(DX + Math.cos(angle) * 0.07, 0.55 + Math.sin(angle) * 0.03, -0.45);
+    spoke.rotation.x = -0.55; spoke.rotation.z = angle;
+    dashGroup.add(spoke);
+  });
+  // Steering wheel center hub
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.015, 12),
+    new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.3}));
+  hub.position.set(DX, 0.55, -0.45); hub.rotation.x = -0.55 + Math.PI/2; dashGroup.add(hub);
+
+  // Left door panel (visible edge on left side)
+  const doorPanelMat = new THREE.MeshStandardMaterial({color: 0x353540, roughness: 0.85});
+  const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.9), doorPanelMat);
+  doorPanel.position.set(DX - 1.45, 0.5, -0.3); dashGroup.add(doorPanel);
+  // Armrest on door
+  const armrest = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.3),
+    new THREE.MeshStandardMaterial({color: 0x2a2a30}));
+  armrest.position.set(DX - 1.4, 0.55, -0.2); dashGroup.add(armrest);
+
+  scene3D.add(dashGroup);
+}
+
+function clearScenarioObjects() {
+  function disposeObj(obj) {
+    if(obj.children) {
+      while(obj.children.length) {
+        disposeObj(obj.children[0]);
+        obj.remove(obj.children[0]);
+      }
+    }
+    if(obj.geometry) obj.geometry.dispose();
+    if(obj.material) {
+      if(obj.material.map) obj.material.map.dispose();
+      obj.material.dispose();
+    }
+  }
+  while(scenarioGroup.children.length) {
+    const obj = scenarioGroup.children[0];
+    disposeObj(obj);
+    scenarioGroup.remove(obj);
+  }
+}
+
+// ─── 3D Object Builders ───
+function make3DSign(text, x, z, color, textColor, shape) {
+  const g = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({color: 0x888888, roughness: 0.4, metalness: 0.4});
+  // Pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3, 8), poleMat);
+  pole.position.set(0, 1.5, 0); g.add(pole);
+
+  // Sign face (canvas texture)
+  const cvs = document.createElement('canvas');
+  cvs.width = 256; cvs.height = 256;
+  const c = cvs.getContext('2d');
+  c.fillStyle = color || '#ffffff';
+  if(shape === 'circle') { c.beginPath(); c.arc(128,128,120,0,Math.PI*2); c.fill(); c.strokeStyle='#fff'; c.lineWidth=8; c.stroke(); }
+  else if(shape === 'triangle') { c.beginPath(); c.moveTo(128,20); c.lineTo(240,220); c.lineTo(16,220); c.closePath(); c.fill(); c.strokeStyle='#cc0000'; c.lineWidth=10; c.stroke(); }
+  else if(shape === 'diamond') { c.beginPath(); c.moveTo(128,10); c.lineTo(246,128); c.lineTo(128,246); c.lineTo(10,128); c.closePath(); c.fill(); c.strokeStyle='#000'; c.lineWidth=6; c.stroke(); }
+  else if(shape === 'pentagon') { const pts=[[128,15],[240,95],[210,235],[46,235],[16,95]]; c.beginPath(); pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1])); c.closePath(); c.fill(); c.strokeStyle='#000'; c.lineWidth=6; c.stroke(); }
+  else { c.fillRect(8,8,240,240); c.strokeStyle='#333'; c.lineWidth=6; c.strokeRect(8,8,240,240); }
+
+  c.fillStyle = textColor || '#000000';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  const lines = text.split('\n');
+  const fSize = lines.length > 2 ? 42 : lines.length > 1 ? 52 : 64;
+  c.font = `bold ${fSize}px Arial`;
+  lines.forEach((l,i) => c.fillText(l, 128, 128 + (i - (lines.length-1)/2) * (fSize+6)));
+
+  const tex = new THREE.CanvasTexture(cvs);
+  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2),
+    new THREE.MeshBasicMaterial({map: tex, transparent: true}));
+  signMesh.position.set(0, 3.2, 0);
+  g.add(signMesh);
+  // Back face (metallic grey)
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2),
+    new THREE.MeshStandardMaterial({color: 0x777777, roughness: 0.5, metalness: 0.3}));
+  back.position.set(0, 3.2, 0.01); back.rotation.y = Math.PI;
+  g.add(back);
+  // Mounting brackets
+  const bracketMat = new THREE.MeshStandardMaterial({color: 0x666666, metalness: 0.4});
+  [[2.7],[3.7]].forEach(([by]) => {
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.08), bracketMat);
+    bracket.position.set(0, by, 0.01); g.add(bracket);
+  });
+
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function make3DCar(x, z, color, rotY) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({color: color, roughness: 0.4, metalness: 0.3});
+  const darkMat = new THREE.MeshStandardMaterial({color: darken3D(color, 30), roughness: 0.5, metalness: 0.2});
+  const glassMat = new THREE.MeshStandardMaterial({color: 0x88bbdd, roughness: 0.1, metalness: 0.4, transparent: true, opacity: 0.55});
+  const chromeMat = new THREE.MeshStandardMaterial({color: 0xcccccc, roughness: 0.2, metalness: 0.7});
+  const tireMat = new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.9});
+  const hubMat = new THREE.MeshStandardMaterial({color: 0xaaaaaa, roughness: 0.3, metalness: 0.6});
+
+  // Lower body (main)
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 4), bodyMat);
+  body.position.y = 0.55; body.castShadow = true; g.add(body);
+
+  // Hood slope (angled box at front)
+  const hoodGeo = new THREE.BoxGeometry(1.7, 0.12, 1.2);
+  const hood = new THREE.Mesh(hoodGeo, bodyMat);
+  hood.position.set(0, 0.88, -1.2); hood.rotation.x = 0.12; hood.castShadow = true; g.add(hood);
+
+  // Trunk slope (angled box at rear)
+  const trunk = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.1, 0.8), bodyMat);
+  trunk.position.set(0, 0.85, 1.4); trunk.rotation.x = -0.15; trunk.castShadow = true; g.add(trunk);
+
+  // Cabin/greenhouse
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.65, 1.8), darkMat);
+  cabin.position.set(0, 1.15, -0.15); cabin.castShadow = true; g.add(cabin);
+
+  // Windshield (angled)
+  const ws = new THREE.Mesh(new THREE.PlaneGeometry(1.42, 0.62), glassMat);
+  ws.position.set(0, 1.15, -1.08); ws.rotation.x = 0.25; g.add(ws);
+
+  // Rear window (angled)
+  const rw = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.5), glassMat);
+  rw.position.set(0, 1.15, 0.82); rw.rotation.x = -0.3; rw.rotation.y = Math.PI; g.add(rw);
+
+  // Side windows (left and right)
+  [[-1, 0],[1, Math.PI]].forEach(([side, ry]) => {
+    const sideWin = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.45), glassMat);
+    sideWin.position.set(side * 0.76, 1.2, -0.15);
+    sideWin.rotation.y = side > 0 ? -Math.PI/2 : Math.PI/2;
+    g.add(sideWin);
+  });
+
+  // Door panel lines
+  const doorLineMat = new THREE.MeshBasicMaterial({color: darken3D(color, 50)});
+  [[-1],[1]].forEach(([side]) => {
+    const doorLine = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 0.65), doorLineMat);
+    doorLine.position.set(side * 0.91, 0.55, -0.3);
+    doorLine.rotation.y = side > 0 ? -Math.PI/2 : Math.PI/2;
+    g.add(doorLine);
+    // Door handle
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.04, 0.15), chromeMat);
+    handle.position.set(side * 0.92, 0.65, -0.5); g.add(handle);
+  });
+
+  // Side mirrors
+  [[-1],[1]].forEach(([side]) => {
+    const mirrorArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.04), darkMat);
+    mirrorArm.position.set(side * 1.0, 0.95, -0.9); g.add(mirrorArm);
+    const mirrorHead = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.16), darkMat);
+    mirrorHead.position.set(side * 1.12, 0.95, -0.9); g.add(mirrorHead);
+  });
+
+  // Bumpers
+  const bumperFront = new THREE.Mesh(new THREE.BoxGeometry(1.82, 0.2, 0.15), chromeMat);
+  bumperFront.position.set(0, 0.3, -2.05); g.add(bumperFront);
+  const bumperRear = new THREE.Mesh(new THREE.BoxGeometry(1.82, 0.2, 0.15), chromeMat);
+  bumperRear.position.set(0, 0.3, 2.05); g.add(bumperRear);
+
+  // Grille
+  const grilleMat = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.3, metalness: 0.4});
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 0.06), grilleMat);
+  grille.position.set(0, 0.5, -2.02); g.add(grille);
+
+  // Headlights (recessed)
+  [[-0.65],[0.65]].forEach(([hx]) => {
+    const hlRecess = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.1),
+      new THREE.MeshStandardMaterial({color: 0x333333}));
+    hlRecess.position.set(hx, 0.55, -2.0); g.add(hlRecess);
+    const hlLens = new THREE.Mesh(new THREE.CircleGeometry(0.08, 10),
+      new THREE.MeshBasicMaterial({color: 0xffffee}));
+    hlLens.position.set(hx, 0.55, -2.03); g.add(hlLens);
+    // Turn signal (amber, next to headlight)
+    const ts = new THREE.Mesh(new THREE.CircleGeometry(0.04, 6),
+      new THREE.MeshBasicMaterial({color: 0xffaa33}));
+    ts.position.set(hx + (hx > 0 ? 0.15 : -0.15), 0.48, -2.03); g.add(ts);
+  });
+
+  // Taillights (recessed)
+  [[-0.65],[0.65]].forEach(([hx]) => {
+    const tlRecess = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.1),
+      new THREE.MeshStandardMaterial({color: 0x331111}));
+    tlRecess.position.set(hx, 0.55, 2.0); g.add(tlRecess);
+    const tlLens = new THREE.Mesh(new THREE.CircleGeometry(0.07, 8),
+      new THREE.MeshBasicMaterial({color: 0xcc2222}));
+    tlLens.position.set(hx, 0.55, 2.03); tlLens.rotation.y = Math.PI; g.add(tlLens);
+  });
+
+  // License plate (rear)
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.02),
+    new THREE.MeshStandardMaterial({color: 0xeeeedd, roughness: 0.5}));
+  plate.position.set(0, 0.35, 2.06); g.add(plate);
+
+  // Wheels with arches and hubcaps
+  [[-0.85,0.3,1.3],[0.85,0.3,1.3],[-0.85,0.3,-1.3],[0.85,0.3,-1.3]].forEach(([wx,wy,wz]) => {
+    // Tire
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.22, 14), tireMat);
+    tire.rotation.z = Math.PI/2; tire.position.set(wx, wy, wz); g.add(tire);
+    // Hubcap
+    const hubFace = new THREE.Mesh(new THREE.CircleGeometry(0.18, 10), hubMat);
+    hubFace.position.set(wx + (wx > 0 ? 0.12 : -0.12), wy, wz);
+    hubFace.rotation.y = wx > 0 ? -Math.PI/2 : Math.PI/2;
+    g.add(hubFace);
+    // Wheel arch (curved cover above wheel)
+    const archMat = new THREE.MeshStandardMaterial({color: darken3D(color, 15), roughness: 0.6});
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.06, 4, 8, Math.PI), archMat);
+    arch.position.set(wx, wy + 0.05, wz);
+    arch.rotation.y = wx > 0 ? -Math.PI/2 : Math.PI/2;
+    g.add(arch);
+  });
+
+  // Antenna (thin cylinder on roof)
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.005, 0.5, 4),
+    new THREE.MeshStandardMaterial({color: 0x222222}));
+  antenna.position.set(-0.5, 1.72, 0.4); g.add(antenna);
+
+  // Undercarriage shadow
+  const underShadow = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 4.1),
+    new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.35}));
+  underShadow.rotation.x = -Math.PI/2; underShadow.position.set(0, 0.02, 0); g.add(underShadow);
+
+  g.position.set(x, 0, z);
+  if(rotY) g.rotation.y = rotY;
+  return g;
+}
+
+function make3DSchoolBus(x, z) {
+  const g = new THREE.Group();
+  const busMat = new THREE.MeshStandardMaterial({color: 0xf0b800, roughness: 0.5, metalness: 0.1});
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 8), busMat);
+  body.position.y = 1.5; body.castShadow = true; g.add(body);
+  // Black bumpers
+  const bumpMat = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.7});
+  const bumpF = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.3, 0.2), bumpMat);
+  bumpF.position.set(0, 0.55, -4.05); g.add(bumpF);
+  const bumpR = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.3, 0.2), bumpMat);
+  bumpR.position.set(0, 0.55, 4.05); g.add(bumpR);
+  // Hood
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.8, 1.5), busMat);
+  hood.position.set(0, 0.8, -4.6); g.add(hood);
+  // Grille
+  const grilleMat = new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.3});
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.06), grilleMat);
+  grille.position.set(0, 0.8, -5.36); g.add(grille);
+  // Headlights
+  [[-0.9],[0.9]].forEach(([hx]) => {
+    const hl = new THREE.Mesh(new THREE.CircleGeometry(0.12, 8), new THREE.MeshBasicMaterial({color: 0xffffcc}));
+    hl.position.set(hx, 0.9, -5.37); g.add(hl);
+  });
+  // Windows
+  const winMat = new THREE.MeshStandardMaterial({color: 0x88bbdd, transparent: true, opacity: 0.6, roughness: 0.1});
+  for(let wz = -2.5; wz < 3; wz += 1.5) {
+    [[-1.21, 1.8, wz],[1.21, 1.8, wz]].forEach(([wx,wy,wzz]) => {
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.9), winMat);
+      win.position.set(wx, wy, wzz);
+      win.rotation.y = wx < 0 ? Math.PI/2 : -Math.PI/2;
+      g.add(win);
+      // Window frame
+      const frame = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.98),
+        new THREE.MeshBasicMaterial({color: 0x111111, transparent: true, opacity: 0.3}));
+      frame.position.set(wx + (wx < 0 ? -0.005 : 0.005), wy, wzz);
+      frame.rotation.y = wx < 0 ? Math.PI/2 : -Math.PI/2;
+      g.add(frame);
+    });
+  }
+  // Windshield
+  const wsGlass = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.5), winMat);
+  wsGlass.position.set(0, 1.8, -4.01); g.add(wsGlass);
+  // SCHOOL BUS text stripe (black on side)
+  const stripeMat = new THREE.MeshBasicMaterial({color: 0x111111});
+  [[-1.21],[1.21]].forEach(([sx]) => {
+    const stripe = new THREE.Mesh(new THREE.PlaneGeometry(5, 0.25), stripeMat);
+    stripe.position.set(sx, 1.1, 0);
+    stripe.rotation.y = sx < 0 ? Math.PI/2 : -Math.PI/2;
+    g.add(stripe);
+  });
+  // Wheels (bigger, with hubcaps)
+  const tireMat = new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.9});
+  const hubMat = new THREE.MeshStandardMaterial({color: 0x888888, metalness: 0.4});
+  [[-1.2,0.4,2.5],[1.2,0.4,2.5],[-1.2,0.4,-2.5],[1.2,0.4,-2.5]].forEach(([wx,wy,wz]) => {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3, 14), tireMat);
+    w.rotation.z = Math.PI/2; w.position.set(wx, wy, wz); g.add(w);
+    const hub = new THREE.Mesh(new THREE.CircleGeometry(0.22, 8), hubMat);
+    hub.position.set(wx + (wx > 0 ? 0.16 : -0.16), wy, wz);
+    hub.rotation.y = wx > 0 ? -Math.PI/2 : Math.PI/2;
+    g.add(hub);
+  });
+  // Stop arm (left side)
+  const stopArm = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.4, 0.8),
+    new THREE.MeshStandardMaterial({color: 0xcc0000}));
+  stopArm.position.set(-1.5, 1.5, -1.5); g.add(stopArm);
+  // Red flashing lights on top
+  [[-0.6, 2.65, -3.8],[0.6, 2.65, -3.8]].forEach(([lx,ly,lz]) => {
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6),
+      new THREE.MeshBasicMaterial({color: 0xff0000}));
+    light.position.set(lx, ly, lz); g.add(light);
+  });
+  // Undercarriage
+  const under = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 8.2),
+    new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.3}));
+  under.rotation.x = -Math.PI/2; under.position.set(0, 0.02, 0); g.add(under);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function make3DTrafficLight(x, z, activeLight) {
+  const g = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({color: 0x444444, roughness: 0.4, metalness: 0.3});
+  // Pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 5, 8), poleMat);
+  pole.position.y = 2.5; g.add(pole);
+  // Base plate
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.1, 8), poleMat);
+  base.position.y = 0.05; g.add(base);
+  // Arm extending over road
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5, 6), poleMat);
+  arm.rotation.z = Math.PI/2; arm.position.set(-2.5, 5, 0); g.add(arm);
+  // Light box housing
+  const boxMat = new THREE.MeshStandardMaterial({color: 0x1a1a1a, roughness: 0.5, metalness: 0.2});
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, 0.45), boxMat);
+  box.position.set(-4.5, 5, 0); g.add(box);
+  // Visor hoods over each light
+  const visorMat = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.6});
+  [0.4, 0, -0.4].forEach(dy => {
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.2), visorMat);
+    visor.position.set(-4.5, 5 + dy + 0.14, -0.32); g.add(visor);
+  });
+  // Lights (red, yellow, green) with lens detail
+  const colors = [0x330000, 0x221100, 0x001100];
+  const active = [0xff0000, 0xffaa00, 0x00cc00];
+  [0.4, 0, -0.4].forEach((dy, i) => {
+    const c = (i === activeLight) ? active[i] : colors[i];
+    // Recessed circle
+    const recess = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 12),
+      new THREE.MeshStandardMaterial({color: 0x0a0a0a}));
+    recess.rotation.x = Math.PI/2; recess.position.set(-4.5, 5 + dy, -0.22); g.add(recess);
+    // Light lens
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 8),
+      new THREE.MeshBasicMaterial({color: c}));
+    light.position.set(-4.5, 5 + dy, -0.24); g.add(light);
+    if(i === activeLight) {
+      const glow = new THREE.PointLight(c, 0.6, 10);
+      glow.position.set(-4.5, 5 + dy, -0.3); g.add(glow);
+    }
+  });
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function make3DPerson(x, z) {
+  const g = new THREE.Group();
+  const skinMat = new THREE.MeshStandardMaterial({color: 0xe8b84d, roughness: 0.7});
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), skinMat);
+  head.position.y = 1.6; head.castShadow = true; g.add(head);
+  // Hair
+  const hairMat = new THREE.MeshStandardMaterial({color: 0x3a2a1a, roughness: 0.9});
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.145, 8, 6), hairMat);
+  hair.position.y = 1.65; hair.scale.set(1, 0.6, 1); g.add(hair);
+  // Torso
+  const shirtColors = [0x4477bb, 0xcc3344, 0x44aa55, 0x8855cc, 0xdd7722];
+  const shirtColor = shirtColors[Math.floor(Math.abs(x * 100 + z * 7)) % shirtColors.length];
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.45, 0.18),
+    new THREE.MeshStandardMaterial({color: shirtColor, roughness: 0.7}));
+  torso.position.y = 1.22; torso.castShadow = true; g.add(torso);
+  // Arms
+  const armMat = new THREE.MeshStandardMaterial({color: shirtColor, roughness: 0.7});
+  [[-0.2],[0.2]].forEach(([ax]) => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), armMat);
+    arm.position.set(ax, 1.15, 0); g.add(arm);
+  });
+  // Legs
+  const legMat = new THREE.MeshStandardMaterial({color: 0x334466, roughness: 0.7});
+  [[-0.08],[0.08]].forEach(([lx]) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.1), legMat);
+    leg.position.set(lx, 0.7, 0); g.add(leg);
+  });
+  // Shoes
+  const shoeMat = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.8});
+  [[-0.08],[0.08]].forEach(([sx]) => {
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.06, 0.16), shoeMat);
+    shoe.position.set(sx, 0.43, 0.03); g.add(shoe);
+  });
+  // Shadow
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.2, 8),
+    new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.25}));
+  shadow.rotation.x = -Math.PI/2; shadow.position.y = 0.01; g.add(shadow);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function make3DFireHydrant(x, z) {
+  const g = new THREE.Group();
+  const hydMat = new THREE.MeshStandardMaterial({color: 0xcc2222, roughness: 0.5, metalness: 0.2});
+  // Base
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.12, 8), hydMat);
+  base.position.y = 0.06; g.add(base);
+  // Body
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.6, 8), hydMat);
+  body.position.y = 0.36; g.add(body);
+  // Cap
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.11, 0.08, 8), hydMat);
+  cap.position.y = 0.7; g.add(cap);
+  const topBolt = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 6),
+    new THREE.MeshStandardMaterial({color: 0xdd3333}));
+  topBolt.position.y = 0.78; g.add(topBolt);
+  // Nozzles (both sides)
+  const nozMat = new THREE.MeshStandardMaterial({color: 0xaa1111, roughness: 0.6});
+  [[-1],[1]].forEach(([side]) => {
+    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6), nozMat);
+    nozzle.rotation.z = Math.PI/2; nozzle.position.set(side * 0.16, 0.42, 0); g.add(nozzle);
+    const nozCap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 6), nozMat);
+    nozCap.rotation.z = Math.PI/2; nozCap.position.set(side * 0.26, 0.42, 0); g.add(nozCap);
+  });
+  // Chain detail
+  const chainMat = new THREE.MeshStandardMaterial({color: 0x999999, metalness: 0.5});
+  const chain = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.008, 4, 12), chainMat);
+  chain.position.y = 0.55; chain.rotation.x = Math.PI/2; g.add(chain);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function make3DCone(x, z) {
+  const g = new THREE.Group();
+  const coneMat = new THREE.MeshStandardMaterial({color: 0xff6600, roughness: 0.6});
+  // Base
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.35), new THREE.MeshStandardMaterial({color: 0x222222}));
+  base.position.y = 0.02; g.add(base);
+  // Cone body
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.6, 8), coneMat);
+  cone.position.y = 0.34; cone.castShadow = true; g.add(cone);
+  // White reflective stripes
+  const stripeMat = new THREE.MeshBasicMaterial({color: 0xffffff});
+  const stripe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.098, 0.108, 0.06, 8), stripeMat);
+  stripe1.position.y = 0.38; g.add(stripe1);
+  const stripe2 = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.075, 0.05, 8), stripeMat);
+  stripe2.position.y = 0.50; g.add(stripe2);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function make3DRailroadCrossing(x, z) {
+  const g = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({color: 0x555555, roughness: 0.4, metalness: 0.3});
+  // Pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 4, 8), poleMat);
+  pole.position.y = 2; g.add(pole);
+  // Base
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.15, 8), poleMat);
+  base.position.y = 0.07; g.add(base);
+  // Crossbuck (X) with reflective white
+  const xMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.3});
+  const bar1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2), xMat);
+  bar1.position.y = 3.8; bar1.rotation.z = Math.PI/4; g.add(bar1);
+  const bar2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2), xMat);
+  bar2.position.y = 3.8; bar2.rotation.z = -Math.PI/4; g.add(bar2);
+  // RAILROAD CROSSING text plane
+  const rrSign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.15),
+    new THREE.MeshBasicMaterial({color: 0x222222}));
+  rrSign.position.set(0, 3.4, -0.01); g.add(rrSign);
+  // Gate arm
+  const armG = new THREE.Group();
+  for(let i = 0; i < 8; i++) {
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.08),
+      new THREE.MeshStandardMaterial({color: i%2 ? 0xdd0000 : 0xffffff, roughness: 0.4}));
+    seg.position.set(-i*0.5 - 0.25, 0, 0); armG.add(seg);
+  }
+  armG.position.set(0, 3.3, 0);
+  armG.rotation.z = Math.PI/3; // lowered
+  g.add(armG);
+  // Flashing light housings
+  const lightHousing = new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.3});
+  [[-0.3, 4.2],[0.3, 4.2]].forEach(([lx, ly], i) => {
+    const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 8), lightHousing);
+    housing.rotation.x = Math.PI/2; housing.position.set(lx, ly, -0.04); g.add(housing);
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6),
+      new THREE.MeshBasicMaterial({color: 0xff0000}));
+    light.position.set(lx, ly, 0); light.name = 'rr_light_' + i; g.add(light);
+  });
+  // Bell on top
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4),
+    new THREE.MeshStandardMaterial({color: 0xaaaa44, metalness: 0.5}));
+  bell.position.set(0, 4.35, 0); bell.scale.y = 0.6; g.add(bell);
+  // Tracks (shiny rails)
+  const trackMat = new THREE.MeshStandardMaterial({color: 0x999999, roughness: 0.3, metalness: 0.5});
+  [[-0.45],[0.45]].forEach(([tz]) => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(14, 0.1, 0.06), trackMat);
+    rail.position.set(0, 0.05, tz); g.add(rail);
+  });
+  // Ties (more detailed)
+  const tieMat = new THREE.MeshStandardMaterial({color: 0x5a4030, roughness: 0.9});
+  for(let tx = -6; tx <= 6; tx += 0.8) {
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 1.4), tieMat);
+    tie.position.set(tx, 0.01, 0); g.add(tie);
+  }
+  // Gravel bed
+  const gravelMat = new THREE.MeshStandardMaterial({color: 0x777770, roughness: 0.95});
+  const gravel = new THREE.Mesh(new THREE.BoxGeometry(14, 0.04, 2), gravelMat);
+  gravel.position.set(0, 0.005, 0); g.add(gravel);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+function darken3D(color, amount) {
+  const r = Math.min(255, Math.max(0, ((color >> 16) & 255) - amount));
+  const g = Math.min(255, Math.max(0, ((color >> 8) & 255) - amount));
+  const b = Math.min(255, Math.max(0, (color & 255) - amount));
+  return (r << 16) | (g << 8) | b;
+}
+
+// ─── Setup scenario in 3D scene ───
+function setup3DScenario(scn) {
+  clearScenarioObjects();
+  camera3D.position.set(1.8, 1.2, 0.5);
+  camera3D.lookAt(1.8, 1.0, -20);
+  scene3D.fog = new THREE.FogExp2(0x9bb8d4, 0.006);
+  scene3D.background = new THREE.Color(0x87CEEB);
+
+  const fp = scn.fpType;
+
+  if(fp === 'yellow-light') {
+    scenarioGroup.add(make3DTrafficLight(4.2, -18, 1)); // yellow active
+    // Stop line
+    const sl = new THREE.Mesh(new THREE.PlaneGeometry(7, 0.3), new THREE.MeshBasicMaterial({color:0xffffff}));
+    sl.rotation.x = -Math.PI/2; sl.position.set(0,0.02,-16); scenarioGroup.add(sl);
+  }
+  else if(fp === 'school-bus') {
+    scenarioGroup.add(make3DSchoolBus(1.5, -20));
+    // Stop arm (red sign on side)
+    const stopSign = make3DSign('STOP', -1.5, -22, '#cc0000', '#ffffff');
+    stopSign.scale.set(0.5,0.5,0.5); scenarioGroup.add(stopSign);
+    scenarioGroup.add(make3DPerson(3.5, -18));
+    scenarioGroup.add(make3DPerson(4, -17));
+  }
+  else if(fp === 'railroad') {
+    scenarioGroup.add(make3DRailroadCrossing(4, -20));
+  }
+  else if(fp === 'emergency') {
+    // Car behind (visible through rearview)
+    const amb = make3DCar(1.8, 12, 0xffffff, 0);
+    scenarioGroup.add(amb);
+    // Lightbar
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, 0.3),
+      new THREE.MeshBasicMaterial({color: 0xff0000}));
+    bar.position.set(1.8, 2.1, 12); bar.name = 'emerg_bar'; scenarioGroup.add(bar);
+  }
+  else if(fp === 'merge') {
+    // Merge ramp road segment
+    const ramp = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 40),
+      new THREE.MeshStandardMaterial({color: 0x333338, roughness: 0.85}));
+    ramp.rotation.x = -Math.PI/2; ramp.rotation.z = -0.25;
+    ramp.position.set(8, 0.015, -25); scenarioGroup.add(ramp);
+    scenarioGroup.add(make3DCar(-1.5, -18, 0x3498db, 0));
+    scenarioGroup.add(make3DCar(5, -14, 0xe74c3c, -0.2));
+    scenarioGroup.add(make3DSign('MERGE', 5, -28, '#ffffff', '#000000'));
+  }
+  else if(fp === 'construction') {
+    // Cones
+    for(let i = 0; i < 6; i++) scenarioGroup.add(make3DCone(2.5, -10 - i*5));
+    scenarioGroup.add(make3DSign('ROAD\nWORK\nAHEAD', 4.5, -30, '#ff8800', '#000000', 'diamond'));
+    scenarioGroup.add(make3DSign('25\nMPH', 4.5, -18, '#ffffff', '#000000'));
+  }
+  else if(fp === 'hydroplane') {
+    scene3D.fog = new THREE.FogExp2(0x708090, 0.02);
+    scene3D.background = new THREE.Color(0x708090);
+    // Water on road
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(6, 8),
+      new THREE.MeshBasicMaterial({color: 0x4477aa, transparent: true, opacity: 0.35}));
+    water.rotation.x = -Math.PI/2; water.position.set(0, 0.03, -20); scenarioGroup.add(water);
+  }
+  else if(fp === 'following') {
+    scenarioGroup.add(make3DCar(1.5, -12, 0x555555, 0));
+  }
+  else if(fp === 'yield-sign') {
+    scenarioGroup.add(make3DSign('YIELD', 4.2, -16, '#ffffff', '#cc0000', 'triangle'));
+    scenarioGroup.add(make3DCar(-1.5, -22, 0x3498db, Math.PI));
+  }
+  else if(fp === 'school-zone') {
+    scenarioGroup.add(make3DSign('SCHOOL\nZONE', 4.2, -25, '#f0e020', '#000000', 'pentagon'));
+    scenarioGroup.add(make3DSign('15\nMPH', 4.2, -18, '#ffffff', '#000000'));
+    scenarioGroup.add(make3DPerson(2.5, -15));
+    scenarioGroup.add(make3DPerson(3, -14));
+  }
+  else if(fp === 'no-passing') {
+    // Double yellow solid line (replace center dashes)
+    const solidLine = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 80),
+      new THREE.MeshBasicMaterial({color: 0xe0b830}));
+    solidLine.rotation.x = -Math.PI/2; solidLine.position.set(-0.08, 0.025, -30); scenarioGroup.add(solidLine);
+    const solidLine2 = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 80),
+      new THREE.MeshBasicMaterial({color: 0xe0b830}));
+    solidLine2.rotation.x = -Math.PI/2; solidLine2.position.set(0.08, 0.025, -30); scenarioGroup.add(solidLine2);
+    scenarioGroup.add(make3DCar(-1.8, -25, 0x777777, Math.PI));
+    scenarioGroup.add(make3DSign('DO NOT\nPASS', -4.2, -22, '#ffffff', '#000000'));
+  }
+  else if(fp === 'do-not-enter') {
+    scenarioGroup.add(make3DSign('DO NOT\nENTER', 2, -18, '#cc0000', '#ffffff', 'circle'));
+    scenarioGroup.add(make3DSign('WRONG\nWAY', 4.5, -16, '#cc0000', '#ffffff'));
+    scenarioGroup.add(make3DCar(-1.5, -30, 0xe74c3c, Math.PI));
+  }
+  else if(fp === 'turn-signal') {
+    scenarioGroup.add(make3DSign('CURVE\nAHEAD', 4.2, -22, '#f0e020', '#000000', 'diamond'));
+  }
+  else if(fp === 'lane-change') {
+    // Extra lane line
+    const lane = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 100),
+      new THREE.MeshBasicMaterial({color: 0xffffff}));
+    lane.rotation.x = -Math.PI/2; lane.position.set(-1.8, 0.02, -30); scenarioGroup.add(lane);
+    const lane2 = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 100),
+      new THREE.MeshBasicMaterial({color: 0xffffff}));
+    lane2.rotation.x = -Math.PI/2; lane2.position.set(1.8, 0.02, -30); scenarioGroup.add(lane2);
+    scenarioGroup.add(make3DCar(3.6, -15, 0x3498db, 0));
+    camera3D.position.set(0, 1.2, 0.5); camera3D.lookAt(0, 1.0, -20);
+  }
+  else if(fp === 'uphill-parking') {
+    // Make road slope slightly (camera tilt)
+    camera3D.position.set(1.8, 1.2, 0.5);
+    camera3D.lookAt(1.8, 1.3, -20); // looking uphill
+    scenarioGroup.add(make3DSign('UPHILL\nPARKING', 4.5, -15, '#ffffff', '#000000'));
+  }
+  else if(fp === 'fire-hydrant') {
+    scenarioGroup.add(make3DFireHydrant(4.8, -12));
+    scenarioGroup.add(make3DSign('15 FT\nMIN', 4.8, -14, '#ffffff', '#000000'));
+  }
+  else if(fp === 'headlights') {
+    scene3D.background = new THREE.Color(0x0a0a20);
+    scene3D.fog = new THREE.FogExp2(0x0a0a20, 0.03);
+    // Headlight beams
+    const hl1 = new THREE.SpotLight(0xffffcc, 0.8, 30, Math.PI/6, 0.5);
+    hl1.position.set(1, 0.7, 0.5); hl1.target.position.set(1, 0, -20);
+    scenarioGroup.add(hl1); scenarioGroup.add(hl1.target);
+    const hl2 = new THREE.SpotLight(0xffffcc, 0.8, 30, Math.PI/6, 0.5);
+    hl2.position.set(2.6, 0.7, 0.5); hl2.target.position.set(2.6, 0, -20);
+    scenarioGroup.add(hl2); scenarioGroup.add(hl2.target);
+  }
+}
+
+// ─── 3D Animation Updates ───
+function update3DScene(scn) {
+  const t = state.animTime;
+  const fp = scn.fpType;
+
+  if(fp === 'yellow-light') {
+    // Blink the yellow light
+    scenarioGroup.traverse(obj => {
+      if(obj.material && obj.material.color) {
+        // Nothing dynamic needed - static yellow
+      }
+    });
+  }
+  else if(fp === 'emergency') {
+    const bar = scenarioGroup.getObjectByName('emerg_bar');
+    if(bar) bar.material.color.setHex(Math.sin(t*10) > 0 ? 0xff0000 : 0x0044ff);
+  }
+  else if(fp === 'railroad') {
+    scenarioGroup.traverse(obj => {
+      if(obj.name === 'rr_light_0') obj.material.color.setHex(Math.sin(t*8) > 0 ? 0xff0000 : 0x440000);
+      if(obj.name === 'rr_light_1') obj.material.color.setHex(Math.sin(t*8) > 0 ? 0x440000 : 0xff0000);
+    });
+  }
+}
+
+function render3D(scn) {
+  update3DScene(scn);
+  renderer3D.render(scene3D, camera3D);
+}
+
+// ===================== ANIMATION =====================
+let lastTime = 0;
+function gameLoop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.1); lastTime = ts;
+  if (state.screen === 'game' && state.scenarios.length) {
+    state.animTime += dt;
+    const scn = state.scenarios[state.current];
+    if (scn) {
+      if (scn.type === 'intersection') {
+        updateAnim(dt);
+        ctx.clearRect(0, 0, CW, CH);
+        drawTopDown(scn);
+      } else {
+        render3D(scn);
+      }
+    }
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function updateAnim(dt) {
+  const scn = state.scenarios[state.current];
+  if (!scn || scn.type !== 'intersection') return;
+
+  if (state.animPhase === 'approaching') {
+    let allStopped = true;
+    state.vehicles.forEach(v => {
+      if (v.stopped || v.gone) return;
+      if (state.animTime < v.arrivalDelay) { allStopped = false; return; }
+      const sp = 140;
+      if (v.approach === 'north') { v.y += sp*dt; if(v.y >= v.stopY){v.y=v.stopY;v.stopped=true;}else allStopped=false; }
+      else if (v.approach === 'south') { v.y -= sp*dt; if(v.y <= v.stopY){v.y=v.stopY;v.stopped=true;}else allStopped=false; }
+      else if (v.approach === 'east') { v.x -= sp*dt; if(v.x <= v.stopX){v.x=v.stopX;v.stopped=true;}else allStopped=false; }
+      else if (v.approach === 'west') { v.x += sp*dt; if(v.x >= v.stopX){v.x=v.stopX;v.stopped=true;}else allStopped=false; }
+    });
+    if (state.pedestrianAnim && state.animTime > state.pedestrianAnim.delay) {
+      const p = state.pedestrianAnim;
+      if (p.targetY != null) {
+        const dir = p.targetY > p.y ? 1 : -1;
+        p.y += dir * 45 * dt;
+        if ((dir>0 && p.y>=p.targetY)||(dir<0 && p.y<=p.targetY)) p.y=p.targetY;
+      }
+      if (p.targetX != null) {
+        const dir = p.targetX > p.x ? 1 : -1;
+        p.x += dir * 45 * dt;
+        if ((dir>0 && p.x>=p.targetX)||(dir<0 && p.x<=p.targetX)) p.x=p.targetX;
+      }
+    }
+    if (allStopped) state.animPhase = 'stopped';
+  }
+
+  if (state.animPhase === 'resolving') {
+    const ci = state.scenarios[state.current].correct;
+    const cv_data = state.scenarios[state.current].vehicles;
+    if (cv_data && cv_data[ci]) {
+      const cv = state.vehicles.find(v => v.id === cv_data[ci].id);
+      if (cv && !cv.gone) {
+        cv.proceeding = true;
+        const sp = 120;
+        if(cv.approach==='north'){cv.y+=sp*dt;if(cv.y>CH+CAR_L)cv.gone=true;}
+        else if(cv.approach==='south'){cv.y-=sp*dt;if(cv.y<-CAR_L)cv.gone=true;}
+        else if(cv.approach==='east'){cv.x-=sp*dt;if(cv.x<-CAR_L)cv.gone=true;}
+        else if(cv.approach==='west'){cv.x+=sp*dt;if(cv.x>CW+CAR_L)cv.gone=true;}
+      }
+    }
+  }
+}
+
+// ===================== START =====================
+init();
+</script>
+</body>
+</html>
